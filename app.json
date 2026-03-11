@@ -23,8 +23,6 @@
       },
       "package": "jp.co.hyakunin_goromaru",
       "versionCode": 1,
-      "minSdkVersion": 26,
-      "targetSdkVersion": 34,
       "permissions": [
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
