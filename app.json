@@ -1,0 +1,71 @@
+{
+  "expo": {
+    "name": "百人一首 ゴロでマル覚え",
+    "slug": "hyakunin-goromaru",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "hyakunin-goromaru",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#f5a623"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "jp.co.hyakunin_goromaru"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#f5a623"
+      },
+      "package": "jp.co.hyakunin_goromaru",
+      "versionCode": 1,
+      "minSdkVersion": 26,
+      "targetSdkVersion": 34,
+      "permissions": [
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/images/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-av",
+        {
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-sqlite",
+        {
+          "enableFTS": true,
+          "useSQLCipher": false
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#f5a623"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "6b878114-260c-4bef-baf6-420562eaf1f2"
+      }
+    },
+    "owner": "itohiroaki"
+  }
+}
