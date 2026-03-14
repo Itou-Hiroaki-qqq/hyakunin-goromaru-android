@@ -47,17 +47,18 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="index" />
-        <Stack.Screen name="(auth)/login" />
-        <Stack.Screen name="(auth)/register" />
+        <Stack.Screen name="(auth)" />
         <Stack.Screen name="learn/index" />
         <Stack.Screen name="learn/[range]/study" />
         <Stack.Screen name="learn/[range]/test" />
         <Stack.Screen name="learn/all-test" />
         <Stack.Screen name="tricky/index" />
+        <Stack.Screen name="tricky/[category]/index" />
         <Stack.Screen name="tricky/[category]/test" />
         <Stack.Screen name="battle/index" />
         <Stack.Screen name="battle/play" />
         <Stack.Screen name="jissen/index" />
+        <Stack.Screen name="jissen/play" />
         <Stack.Screen name="review/index" />
         <Stack.Screen name="review/study" />
       </Stack>

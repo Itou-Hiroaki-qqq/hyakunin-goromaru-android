@@ -1,12 +1,7 @@
 // APIベースURL は EXPO_PUBLIC_API_URL 環境変数から読み取る
 // .env ファイルに EXPO_PUBLIC_API_URL=https://your-api.workers.dev を設定すること
-const apiUrl = process.env.EXPO_PUBLIC_API_URL;
-if (!apiUrl) {
-  throw new Error(
-    'EXPO_PUBLIC_API_URL が設定されていません。.env ファイルを確認してください。'
-  );
-}
-export const API_BASE_URL = apiUrl;
+export const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL ?? 'https://hyakunin-goromaru.chiteijin315.workers.dev';
 
 export const API_ENDPOINTS = {
   POEMS: '/api/poems',
