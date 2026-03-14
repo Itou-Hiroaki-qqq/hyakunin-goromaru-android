@@ -6,15 +6,23 @@ import {
   StyleSheet,
   FlatList,
   SafeAreaView,
-  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { getTestClears } from '@/api/testClears';
 import Header from '@/components/layout/Header';
 import StarBadge from '@/components/ui/StarBadge';
-import { BLOCKS } from '@/utils/blockUtils';
+import { BLOCKS, EIGHT_TEST_BLOCK_IDS, TWENTY_TEST_BLOCKS } from '@/utils/blockUtils';
 import { COLORS } from '@/constants/study';
+
+/**
+ * ブロックの「8首テスト」用の範囲キーを計算する
+ * 例: ブロック2(5-8) → "1-8"、ブロック25(97-100) → "93-100"
+ */
+function getEightTestRangeKey(blockFrom: number, blockTo: number): string {
+  const eightFrom = blockFrom - 4;
+  return `${eightFrom}-${blockTo}`;
+}
 
 /**
  * 学習トップ画面（25ブロック一覧）
@@ -44,6 +52,9 @@ export default function LearnIndexScreen() {
     const isExpanded = expandedBlock === item.id;
     const cleared = isBlockCleared(item.rangeKey);
 
+    const showEightTest = EIGHT_TEST_BLOCK_IDS.has(item.id);
+    const twentyTestInfo = TWENTY_TEST_BLOCKS[item.id];
+
     return (
       <View style={styles.blockContainer}>
         <TouchableOpacity
@@ -60,20 +71,59 @@ export default function LearnIndexScreen() {
 
         {isExpanded && (
           <View style={styles.blockActions}>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => router.push(`/learn/${item.rangeKey}/study`)}
-            >
-              <Text style={styles.actionButtonText}>📚 Study</Text>
-              <Text style={styles.actionSubtext}>6ステップで覚える</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.testButton]}
-              onPress={() => router.push(`/learn/${item.rangeKey}/test`)}
-            >
-              <Text style={styles.actionButtonText}>✏️ Test</Text>
-              <Text style={styles.actionSubtext}>4択クイズ</Text>
-            </TouchableOpacity>
+            {/* 基本ボタン行: Study と 4首テスト */}
+            <View style={styles.mainButtonRow}>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => router.push(`/learn/${item.rangeKey}/study`)}
+              >
+                <Text style={styles.actionButtonText}>📚 Study</Text>
+                <Text style={styles.actionSubtext}>2ステップで覚える</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.testButton]}
+                onPress={() => router.push(`/learn/${item.rangeKey}/test`)}
+              >
+                <Text style={styles.actionButtonText}>✏️ Test</Text>
+                <Text style={styles.actionSubtext}>4首テスト</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* 8首テストボタン */}
+            {showEightTest && (
+              <TouchableOpacity
+                style={styles.eightTestButton}
+                onPress={() => {
+                  const rangeKey = getEightTestRangeKey(item.from, item.to);
+                  router.push(`/learn/${rangeKey}/test`);
+                }}
+              >
+                <Text style={styles.eightTestButtonText}>
+                  📝 前回も入れて8首テスト
+                </Text>
+                <Text style={styles.eightTestSubtext}>
+                  {item.from - 4}〜{item.to}首
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* 20首テストボタン */}
+            {twentyTestInfo && (
+              <TouchableOpacity
+                style={styles.twentyTestButton}
+                onPress={() => {
+                  const rangeKey = `${twentyTestInfo.from}-${twentyTestInfo.to}`;
+                  router.push(`/learn/${rangeKey}/test`);
+                }}
+              >
+                <Text style={styles.twentyTestButtonText}>
+                  🏆 {twentyTestInfo.label}
+                </Text>
+                <Text style={styles.twentyTestSubtext}>
+                  {twentyTestInfo.to - twentyTestInfo.from + 1}首まとめテスト
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </View>
@@ -114,6 +164,7 @@ const styles = StyleSheet.create({
   list: {
     padding: 16,
     gap: 8,
+    paddingBottom: 60,
   },
   listHeader: {
     marginBottom: 16,
@@ -160,9 +211,11 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   blockActions: {
-    flexDirection: 'row',
     borderTopWidth: 1,
     borderTopColor: '#f3f4f6',
+  },
+  mainButtonRow: {
+    flexDirection: 'row',
   },
   actionButton: {
     flex: 1,
@@ -183,6 +236,42 @@ const styles = StyleSheet.create({
   actionSubtext: {
     fontSize: 11,
     color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  // 8首テストボタン — 緑系
+  eightTestButton: {
+    padding: 12,
+    alignItems: 'center',
+    backgroundColor: '#f0fdf4',
+    borderTopWidth: 1,
+    borderTopColor: '#d1fae5',
+  },
+  eightTestButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#16a34a',
+  },
+  eightTestSubtext: {
+    fontSize: 11,
+    color: '#4ade80',
+    marginTop: 2,
+  },
+  // 20首テストボタン — 紫系
+  twentyTestButton: {
+    padding: 12,
+    alignItems: 'center',
+    backgroundColor: '#faf5ff',
+    borderTopWidth: 1,
+    borderTopColor: '#e9d5ff',
+  },
+  twentyTestButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#7c3aed',
+  },
+  twentyTestSubtext: {
+    fontSize: 11,
+    color: '#a78bfa',
     marginTop: 2,
   },
 });

@@ -92,3 +92,109 @@ export function generateTwentyGroups(): TwentyGroup[] {
     };
   });
 }
+
+/**
+ * 8首テストを表示すべきブロックID
+ * 偶数ブロック(2,4,...24) + ブロック25
+ */
+export const EIGHT_TEST_BLOCK_IDS = new Set([2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 25]);
+
+/**
+ * 20首テストを表示すべきブロックIDとその範囲
+ */
+export const TWENTY_TEST_BLOCKS: Record<number, { from: number; to: number; label: string }> = {
+  5:  { from: 1,  to: 20,  label: '1〜20首テスト' },
+  10: { from: 21, to: 40,  label: '21〜40首テスト' },
+  15: { from: 41, to: 60,  label: '41〜60首テスト' },
+  20: { from: 61, to: 80,  label: '61〜80首テスト' },
+  25: { from: 81, to: 100, label: '81〜100首テスト' },
+};
+
+/**
+ * テスト完了時の「次のアクション」を決定する
+ *
+ * @param rangeKey テスト範囲 ("1-4", "1-8", "1-20" など)
+ * @returns 次のアクション情報の配列（表示順）
+ */
+export interface NextTestAction {
+  label: string;
+  /** 遷移先のルートパス */
+  route: string;
+}
+
+export function getNextTestActions(rangeKey: string): NextTestAction[] {
+  const actions: NextTestAction[] = [];
+  const parts = rangeKey.split('-');
+  if (parts.length !== 2) return actions;
+  const from = parseInt(parts[0], 10);
+  const to = parseInt(parts[1], 10);
+  const poemCount = to - from + 1;
+
+  // 4首テスト完了時
+  if (poemCount === 4) {
+    const block = BLOCKS.find((b) => b.from === from && b.to === to);
+    if (!block) return actions;
+
+    // 8首テストがあるか
+    if (EIGHT_TEST_BLOCK_IDS.has(block.id)) {
+      const eightFrom = block.from - 4;
+      const eightRangeKey = `${eightFrom}-${block.to}`;
+      actions.push({
+        label: '前回も入れて8首テストへ',
+        route: `/learn/${eightRangeKey}/test`,
+      });
+    }
+    // 20首テストがあるか（8首テストがない場合のみ直接表示）
+    else if (TWENTY_TEST_BLOCKS[block.id]) {
+      const twenty = TWENTY_TEST_BLOCKS[block.id];
+      actions.push({
+        label: `${twenty.label}へ`,
+        route: `/learn/${twenty.from}-${twenty.to}/test`,
+      });
+    }
+    // 次のブロックへ（最終ブロックでなければ）
+    else if (block.id < 25) {
+      const nextBlock = BLOCKS[block.id]; // id is 1-based, array is 0-based
+      actions.push({
+        label: '次のブロックへ',
+        route: `/learn/${nextBlock.rangeKey}/study`,
+      });
+    }
+  }
+  // 8首テスト完了時
+  else if (poemCount === 8) {
+    // toが属するブロックを見つける
+    const block = BLOCKS.find((b) => b.to === to);
+    if (!block) return actions;
+
+    // 20首テストがあるか
+    if (TWENTY_TEST_BLOCKS[block.id]) {
+      const twenty = TWENTY_TEST_BLOCKS[block.id];
+      actions.push({
+        label: `${twenty.label}へ`,
+        route: `/learn/${twenty.from}-${twenty.to}/test`,
+      });
+    }
+    // 次のブロックへ
+    else if (block.id < 25) {
+      const nextBlock = BLOCKS[block.id];
+      actions.push({
+        label: '次のブロックへ',
+        route: `/learn/${nextBlock.rangeKey}/study`,
+      });
+    }
+  }
+  // 20首テスト完了時
+  else if (poemCount === 20) {
+    // toの次のブロックへ
+    const block = BLOCKS.find((b) => b.from === to + 1);
+    if (block) {
+      actions.push({
+        label: '次のブロックへ',
+        route: `/learn/${block.rangeKey}/study`,
+      });
+    }
+  }
+
+  return actions;
+}

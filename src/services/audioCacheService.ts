@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 const CACHE_DIR = `${FileSystem.documentDirectory}audio/`;
 // キャッシュサイズ上限: 200MB
@@ -82,7 +82,7 @@ class AudioCacheService {
 
       for (const file of files) {
         const path = `${CACHE_DIR}${file}`;
-        const info = await FileSystem.getInfoAsync(path, { size: true });
+        const info = await FileSystem.getInfoAsync(path);
         if (info.exists) {
           fileInfos.push({
             path,

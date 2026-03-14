@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,61 +8,85 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/authStore';
+import { getTestClears } from '@/api/testClears';
+import { reviewDatabase } from '@/services/reviewDatabase';
 import { COLORS } from '@/constants/study';
 
 interface NavItem {
   title: string;
   subtitle: string;
   route: string;
-  emoji: string;
   color: string;
+  /** true のときアンロック条件あり（灰色表示） */
+  requiresUnlock?: boolean;
 }
-
-const NAV_ITEMS: NavItem[] = [
-  {
-    title: '学習',
-    subtitle: '6ステップで百人一首をマスター',
-    route: '/learn',
-    emoji: '📖',
-    color: '#f5a623',
-  },
-  {
-    title: '間違えやすい問題',
-    subtitle: '紛らわしい句を集中練習',
-    route: '/tricky',
-    emoji: '⚡',
-    color: '#8b5cf6',
-  },
-  {
-    title: 'コンピューター対戦',
-    subtitle: 'AIと対決！難易度を選んで挑戦',
-    route: '/battle',
-    emoji: '🎮',
-    color: '#3b82f6',
-  },
-  {
-    title: '実践問題',
-    subtitle: '100首テストクリア後に解放',
-    route: '/jissen',
-    emoji: '🏆',
-    color: '#10b981',
-  },
-  {
-    title: '復習',
-    subtitle: '間違えた問題を効率よく復習',
-    route: '/review',
-    emoji: '🔄',
-    color: '#ef4444',
-  },
-];
 
 /**
  * ホーム画面
+ *
+ * ロック/アンロック状態の動的反映:
+ * - 復習: reviewDatabase に1件以上あるときのみ有効
+ * - 実践問題・コンピューター対戦: 100首テストクリア後に有効
  */
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
+
+  const { data: testClears = [] } = useQuery({
+    queryKey: ['testClears'],
+    queryFn: getTestClears,
+    enabled: !!user,
+  });
+
+  const [hasReview, setHasReview] = useState(false);
+
+  // 起動時に復習データを確認
+  useEffect(() => {
+    reviewDatabase.getAll().then((items) => setHasReview(items.length > 0)).catch(() => {});
+  }, []);
+
+  // 100首テストクリア済みか
+  const isAllCleared = testClears.some(
+    (c) => c.test_type === '100首' && c.range_key === 'all',
+  );
+
+  const NAV_ITEMS: NavItem[] = [
+    {
+      title: '学習',
+      subtitle: '2ステップで百人一首をマスター',
+      route: '/learn',
+      color: '#f5a623',
+    },
+    {
+      title: '間違えやすい問題',
+      subtitle: '紛らわしい句を集中練習',
+      route: '/tricky',
+      color: '#8b5cf6',
+    },
+    {
+      title: 'コンピューター対戦',
+      subtitle: isAllCleared ? 'AIと対決！難易度を選んで挑戦' : '100首テスト ノーミスクリアで解放',
+      route: '/battle',
+      color: '#3b82f6',
+      requiresUnlock: !isAllCleared,
+    },
+    {
+      title: '実践問題',
+      subtitle: isAllCleared ? '音声を聞いて下の句を答える' : '100首テスト ノーミスクリアで解放',
+      route: '/jissen',
+      color: '#10b981',
+      requiresUnlock: !isAllCleared,
+    },
+    {
+      title: '復習',
+      subtitle: hasReview ? '間違えた問題を効率よく復習' : '復習リストは空です',
+      route: '/review',
+      color: '#ef4444',
+      requiresUnlock: !hasReview,
+    },
+  ];
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -82,21 +106,40 @@ export default function HomeScreen() {
         contentContainerStyle={styles.navGrid}
         showsVerticalScrollIndicator={false}
       >
-        {NAV_ITEMS.map((item) => (
-          <TouchableOpacity
-            key={item.route}
-            style={[styles.navCard, { borderLeftColor: item.color }]}
-            onPress={() => router.push(item.route as Parameters<typeof router.push>[0])}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.navEmoji}>{item.emoji}</Text>
-            <View style={styles.navTextContainer}>
-              <Text style={styles.navTitle}>{item.title}</Text>
-              <Text style={styles.navSubtitle}>{item.subtitle}</Text>
-            </View>
-            <Text style={styles.navArrow}>›</Text>
-          </TouchableOpacity>
-        ))}
+        {NAV_ITEMS.map((item) => {
+          const isLocked = item.requiresUnlock;
+          return (
+            <TouchableOpacity
+              key={item.route}
+              style={[
+                styles.navCard,
+                { borderLeftColor: isLocked ? '#d1d5db' : item.color },
+                isLocked && styles.navCardLocked,
+              ]}
+              onPress={() => {
+                if (!isLocked) {
+                  router.push(item.route as Parameters<typeof router.push>[0]);
+                }
+              }}
+              activeOpacity={isLocked ? 1 : 0.8}
+            >
+              <View style={styles.navTextContainer}>
+                <Text
+                  style={[styles.navTitle, isLocked && styles.navTitleLocked]}
+                >
+                  {item.title}
+                  {isLocked ? ' 🔒' : ''}
+                </Text>
+                <Text style={styles.navSubtitle}>{item.subtitle}</Text>
+              </View>
+              <Text
+                style={[styles.navArrow, isLocked && { color: '#d1d5db' }]}
+              >
+                ›
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
 
         {user && (
           <TouchableOpacity
@@ -164,19 +207,20 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
   },
-  navEmoji: {
-    fontSize: 32,
-    width: 48,
-    textAlign: 'center',
+  navCardLocked: {
+    opacity: 0.6,
+    backgroundColor: '#f9fafb',
   },
   navTextContainer: {
     flex: 1,
-    marginLeft: 12,
   },
   navTitle: {
     fontSize: 17,
     fontWeight: '700',
     color: COLORS.textPrimary,
+  },
+  navTitleLocked: {
+    color: '#9ca3af',
   },
   navSubtitle: {
     fontSize: 12,
@@ -187,6 +231,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: COLORS.textSecondary,
     fontWeight: '300',
+    marginLeft: 8,
   },
   logoutButton: {
     marginTop: 8,

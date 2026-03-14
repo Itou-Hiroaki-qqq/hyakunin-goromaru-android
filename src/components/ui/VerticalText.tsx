@@ -8,38 +8,35 @@ interface HighlightRange {
 }
 
 interface VerticalTextProps {
-  text: string;
+  /**
+   * 表示する行の配列（splitToLines で分割済みのもの）
+   * 例: ['あかにし', 'やのかわ'] → 2列縦書き
+   */
+  lines: string[];
   highlightRange?: HighlightRange;
   highlightColor?: string;
   fontSize?: number;
-  lineLength?: number;  // 1行の文字数
 }
 
 /**
- * 縦書きテキストコンポーネント
+ * 縦書きテキストコンポーネント（lines[] props方式）
  *
  * React Nativeには writing-mode がないため、
- * 1文字ずつTextに分割し、flexDirection: column で縦配置。
- * 行をrow-reverseで右→左に配置することで縦書きを実現。
+ * 1文字ずつ Text に分割し flexDirection: column で縦配置。
+ * 行を row-reverse で右→左に並べることで縦書きを実現。
+ *
+ * lines[] は splitToLines() で分割済みの文字列配列を渡す。
  */
 const VerticalText = memo(
   ({
-    text,
+    lines,
     highlightRange,
     highlightColor = COLORS.highlight,
     fontSize = 22,
-    lineLength = 3,
   }: VerticalTextProps) => {
-    const chars = text.split('');
-
-    // テキストをlineLength文字ずつの行に分割
-    const lines: string[][] = [];
-    for (let i = 0; i < chars.length; i += lineLength) {
-      lines.push(chars.slice(i, i + lineLength));
-    }
-
     /**
-     * 文字のグローバルインデックスからハイライト対象かどうかを判定する
+     * 元のテキスト全体における文字のグローバルインデックスを計算する
+     * lines を連結した文字列での位置として扱う
      */
     const isHighlighted = (globalIndex: number): boolean => {
       if (!highlightRange) return false;
@@ -47,20 +44,28 @@ const VerticalText = memo(
       return globalIndex >= start && globalIndex < start + length;
     };
 
+    // 各行の先頭文字がどのグローバルインデックスから始まるかを算出
+    const lineOffsets: number[] = [];
+    let offset = 0;
+    for (const line of lines) {
+      lineOffsets.push(offset);
+      offset += line.length;
+    }
+
     return (
-      // row-reverseで右→左方向に行を並べる（縦書きの列配置）
+      // row-reverse で右→左方向に列を並べる（縦書きの列配置）
       <View style={styles.container}>
-        {lines.map((lineChars, lineIndex) => (
+        {lines.map((line, lineIndex) => (
           <View key={lineIndex} style={styles.line}>
-            {lineChars.map((char, charIndex) => {
-              const globalIndex = lineIndex * lineLength + charIndex;
+            {line.split('').map((char, charIndex) => {
+              const globalIndex = lineOffsets[lineIndex] + charIndex;
               const highlighted = isHighlighted(globalIndex);
               return (
                 <Text
                   key={charIndex}
                   style={[
                     styles.char,
-                    { fontSize },
+                    { fontSize, lineHeight: Math.round(fontSize * 1.4) },
                     highlighted && { color: highlightColor },
                   ]}
                 >
@@ -85,7 +90,7 @@ const styles = StyleSheet.create({
   line: {
     flexDirection: 'column', // 縦方向に文字を並べる
     alignItems: 'center',
-    marginHorizontal: 2,
+    marginHorizontal: 6,
   },
   char: {
     color: COLORS.textPrimary,

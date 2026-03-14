@@ -6,163 +6,152 @@
 - バックエンドAPIは既存Cloudflare Workersを共用（Bearer Token認証に変更）
 
 ## 技術スタック
-- Expo SDK 55 + React Native 0.83
+- Expo SDK 55 + React Native 0.83.2
 - TypeScript 5.9
 - Expo Router v5（ファイルベースルーティング）
 - Zustand v5（状態管理）
 - TanStack Query v5 + axios（APIクライアント）
 - expo-secure-store（JWT Bearer認証トークン保存）
 - expo-av（音声再生）
-- React Native Reanimated v3（アニメーション）
+- React Native Reanimated v4（アニメーション）
 - expo-sqlite（復習データのローカルDB）
 - expo-notifications（プッシュ通知）
-- expo-file-system（音声キャッシュ）
+- expo-file-system/legacy（音声キャッシュ ※SDK 55で旧APIはlegacyに移動）
 
-## 実装済み機能
+## 環境情報
+- `.env` に `EXPO_PUBLIC_API_URL=https://hyakunin-goromaru.chiteijin315.workers.dev` 設定済み
+- Expoアカウント: itohiroaki
+- EASプロジェクトID: 6b878114-260c-4bef-baf6-420562eaf1f2
+- gitリポジトリ初期化済み（ローカルのみ、GitHubへのpushなし）
 
-### 設定ファイル
-- `package.json`: 全依存関係定義
-- `app.json`: Expo設定（パッケージ名: jp.co.hyakunin_goromaru、Android向け）
-- `tsconfig.json`: パスエイリアス（@/* → src/*）
-- `babel.config.js`: expo + Reanimatedプラグイン
-- `eas.json`: EAS Build設定（dev/preview/production）
-- `.env.example`: 環境変数テンプレート
-- `.gitignore`: Expo標準 + .env系除外
-
-### 型定義（src/types/）
-- `poem.ts`: Poemインターフェース（全カラム）
-- `user.ts`: Userインターフェース
-- `test.ts`: TestClear, TestBestScoreインターフェース
-
-### 定数（src/constants/）
-- `api.ts`: APIベースURL・エンドポイント・SecureStoreキー
-- `study.ts`: 6ステップ定義・Battle難易度・カラーテーマ
-
-### APIクライアント層（src/api/）
-- `client.ts`: axiosインスタンス + Bearerトークンインターセプター
-- `poems.ts`: GET /api/poems
-- `auth.ts`: login/register/logout/getMe
-- `testClears.ts`: GET/POST /api/test-clears
-- `testBestScores.ts`: GET/POST /api/test-best-scores
-
-### Zustandストア（src/stores/）
-- `authStore.ts`: token/user/login/logout/restoreToken
-- `studyStore.ts`: 6ステップ学習状態管理
-- `testStore.ts`: 4択クイズ状態管理
-- `battleStore.ts`: Battle対戦状態管理
-
-### カスタムフック（src/hooks/）
-- `usePoems.ts`: TanStack QueryでPoems取得
-- `useAudio.ts`: expo-av音声再生制御
-- `useStudyStep.ts`: 6ステップ学習制御（ステップ遷移＋音声再生）
-- `useTest.ts`: テストロジック（4択生成・採点・結果保存）
-- `useBattle.ts`: Battleタイマー制御
-- `useReview.ts`: 復習データ管理
-
-### コンポーネント（src/components/）
-- `ui/VerticalText.tsx`: 縦書きテキスト（flexDirection: row-reverse + column）
-- `ui/PoemCard.tsx`: 札風カード（琥珀色ボーダー）
-- `ui/GoroText.tsx`: 語呂ハイライトテキスト（[]記法でハイライト）
-- `ui/TypewriterText.tsx`: 逐字表示アニメーション（120ms間隔）
-- `ui/StarBadge.tsx`: クリア★バッジ
-- `ui/AudioButton.tsx`: 音声再生ボタン
-- `learn/StudyCard.tsx`: 6ステップ学習カード
-- `learn/QuizOption.tsx`: 4択選択肢（〇/×フィードバック）
-- `battle/TimerBar.tsx`: Reanimatedを使ったAIタイマーバー
-- `battle/ResultModal.tsx`: 勝敗結果モーダル
-- `layout/Header.tsx`: 画面ヘッダー
-
-### サービス（src/services/）
-- `audioService.ts`: expo-avラッパー（playOnce/playSequence/stopAll）
-- `audioCacheService.ts`: FileSystemを使った音声キャッシュ（LRU、200MB上限）
-- `reviewDatabase.ts`: expo-sqlite操作（間隔反復スケジュール）
-- `notificationService.ts`: expo-notificationsローカル通知
-
-### ユーティリティ（src/utils/）
-- `poemUtils.ts`: Fisher-Yatesシャッフル・4択問題生成
-- `blockUtils.ts`: 25ブロック構造計算
-- `scoreUtils.ts`: スコア計算・勝敗判定
-
-### 画面（app/）
-- `_layout.tsx`: QueryClientProvider + 認証復元 + DB初期化
-- `index.tsx`: ホーム画面（5機能へのナビゲーション）
-- `(auth)/login.tsx`: ログイン画面
-- `(auth)/register.tsx`: ユーザー登録画面
-- `learn/index.tsx`: 25ブロック一覧（展開可能、★クリア表示）
-- `learn/[range]/study.tsx`: 6ステップStudyモード
-- `learn/[range]/test.tsx`: 4択Testモード
-- `learn/all-test.tsx`: 100首テスト
-- `tricky/index.tsx`: 上の句/下の句カテゴリ選択
-- `tricky/[category]/test.tsx`: Trickyテスト（30問）
-- `battle/index.tsx`: Battle設定（難易度×問題数）
-- `battle/play.tsx`: Battle対戦画面
-- `jissen/index.tsx`: 実践問題（100首クリアで解放）
-- `review/index.tsx`: 復習一覧（間隔反復スケジュール）
-- `review/study.tsx`: 復習学習（正解で復習リストから削除）
-
-## 作業内容の要約
-- 2026-03-11: 設計ドキュメントに基づき全機能を実装
-- `npx create-expo-app` でプロジェクト初期化（/tmp で作成後コピー）
-- TypeScriptエラーゼロで型チェック通過
-- `npm install` 成功（731パッケージ）
-
-## 次のステップ
-1. `.env` ファイルを作成して `EXPO_PUBLIC_API_URL` を設定
-2. バックエンドAPIのBearer Token対応（/api/auth/login等のレスポンスにtokenを追加）
-3. `npx expo start` でアプリを起動して動作確認
-4. EAS Build でAPKビルド・実機テスト
-5. Google Play Store申請
-
-## 既知の制限・TODO
-- assets/fonts/ ディレクトリは作成済みだがNoto Serif JPフォントは未配置（実装時に追加要）
-- FlashList（@shopify/flash-list）は未導入（100首一覧で必要なら追加）
-- 実践問題は100首クリア後のUIのみ実装（リスニング問題の本格実装は未）
-- TrickyモードはWeb版と完全同一のデータ構造が必要（バックエンド要確認）
+## EASビルド状況
+- developmentプロファイルでビルド成功（2026-03-12）
+- ビルドID: 2d2b0b63-bb52-45de-9199-e71abffe5fd9
+- APK: https://expo.dev/artifacts/eas/6zuTSBUTV3iTQMrsxAfoVg.apk
+- スマホにインストール済み、開発サーバー接続で動作確認済み
 
 ---
 
-## テスト作業（2026-03-11）
+## 旧アプリUI/UX移植作業（2026-03-13）
 
-### 追加した依存関係（devDependencies）
-- `jest` `jest-expo@55` `babel-preset-expo` `@testing-library/react-native` `@testing-library/jest-native` `@types/jest` `react-test-renderer@19.2.0`
-- `--legacy-peer-deps` フラグが必要（react@19.2.0とreact-test-rendererのpeer deps競合）
+### 実施内容
+docs/migration-plan.md の設計に基づき、Phase 1〜7を全て実装。
 
-### 作成したテストインフラ
-- `jest.config.js`: jest-expoプリセット + `@/`エイリアス + expo/src/winterモック設定
-- `__tests__/setup/mocks.ts`: ネイティブモジュールの一括モック
-- `__tests__/setup/expoWinterMock.js`: expo/src/winterのimport.meta問題の回避モック
+### Phase 1: 基盤整備（新規作成・修正）
+- `src/utils/formatLines.ts` — splitToLines（旧アプリから移植）
+- `src/utils/goroUtils.ts` — findGoroRange/goroToSearch（旧アプリから移植）
+- `src/data/tricky-questions.ts` — KAMI_TRICKY_SETS(25)/SHIMO_TRICKY_SETS(24)
+- `src/data/goro-timings.ts` — KAMI_GORO_END_SEC(100首) + getKamiGoroEndSec
+- `src/components/ui/VerticalText.tsx` — lines[] props方式に変更
+- `src/components/ui/ChoiceCard.tsx` — 琥珀色縦書き選択肢カード（〇×オーバーレイ）
+- `src/components/ui/PoemCard.tsx` — highlightRange対応
 
-### テスト結果（244テスト・全PASS）
-| ファイル | テスト数 |
-|---------|---------|
-| utils/poemUtils.test.ts | 30 |
-| utils/blockUtils.test.ts | 32 |
-| utils/scoreUtils.test.ts | 34 |
-| stores/studyStore.test.ts | 26 |
-| stores/testStore.test.ts | 31 |
-| stores/battleStore.test.ts | 40 |
-| components/VerticalText.test.tsx | 17 |
-| components/GoroText.test.tsx | 17 |
-| components/QuizOption.test.tsx | 17 |
-| **合計** | **244** |
+### Phase 2: テスト画面
+- `src/hooks/useKamiAudio.ts` — 問題切り替え時に音声自動再生
+- `src/hooks/useGoroPlayback.ts` — 語呂ハイライトアニメーション
+- `src/stores/testStore.ts` — clickedWrong[]方式、perfectScore追加
+- `src/hooks/useTest.ts` — useKamiAudio/useGoroPlayback統合
+- `app/learn/[range]/test.tsx` — ChoiceCard 2x2グリッド、語呂ハイライト
+- `app/learn/all-test.tsx` — 同様の修正
 
-### カバレッジ
-- Statements: 100% / Branches: 97.56% / Functions: 100% / Lines: 100%
-- 未カバー2箇所はデッドコード（blockUtils.ts:63の`to > 100`は到達不能・GoroText.tsx:57のパース失敗フォールバック）
+### Phase 3: 学習フロー
+- `src/stores/studyStore.ts` — phase('learn'|'practice') + learnStep(0-6)
+- `src/hooks/useStudyStep.ts` — 全面書き直し（自動遷移、逐字表示、練習フェーズ）
+- `app/learn/[range]/study.tsx` — 旧アプリの学習フロー再現
 
-### 発見した問題
-- `blockUtils.ts` 63行目: `to: to > 100 ? 100 : to` の条件は`Math.min(from + 7, 100)`ですでに上限保証されているためデッドコード
+### Phase 4: 間違えやすい問題
+- `app/tricky/index.tsx` — カテゴリ選択画面
+- `app/tricky/[category]/index.tsx` — セット一覧画面（新規）
+- `app/tricky/[category]/test.tsx` — TRICKY_SETSベース、問題方向修正
 
-### 将来追加すべきテスト
-- `src/hooks/` のカスタムフックテスト（usePoems, useStudyStep, useTest, useBattle）
-- `src/api/` のAPIクライアントテスト（axiosモック使用）
-- `src/services/` のサービステスト（audioService, reviewDatabase）
-- E2Eテスト（DetoxまたはMaestro）
+### Phase 5: 復習・実践問題
+- `app/review/index.tsx` — 1問ずつクイズ形式に変更
+- `app/jissen/play.tsx` — 音声のみで下の句を当てるモード（新規）
+- `app/jissen/index.tsx` — play.tsxへの遷移
+
+### Phase 6: コンピューター対戦
+- `app/battle/play.tsx` — AIタイマー + 手アニメーション + 結果画面
+
+### Phase 7: ホーム画面
+- `app/index.tsx` — ロック/アンロック動的反映
+
+### テスト結果
+- 12スイート、318テスト全パス
+- 新規テスト: formatLines.test.ts, goroUtils.test.ts, goroTimings.test.ts
+- react-test-renderer@19.2.4 にアップデート（バージョン不一致修正）
+
+### セキュリティレビュー結果
+- CRITICAL/HIGH: なし
+- MEDIUM: coverage/を.gitignoreに追加（対応済み）、EXPO_PUBLIC_変数の公開（バックエンド側でレート制限推奨）
+- LOW: 本番ビルドでのconsole出力除去推奨（babel-plugin-transform-remove-console）
+
+### ドキュメント
+- `docs/migration-plan.md` — 旧アプリ→新アプリ修正設計計画
+- `README.md` — GitHub向け、SDK 55対応に更新
+
+### 動作確認状況
+- ホーム画面: 表示OK
+- ExpoKeepAwake.activateエラー: 開発ビルド時のみ、動作に影響なし（Dismiss可）
+- 学習画面: 遷移OK、音声再生OK（expo-file-system/legacy修正後）
+- **実機での全画面テストは次回実施予定**
 
 ---
 
-## README.md 作成（2026-03-11）
+---
 
-- `README.md` を新規作成（GitHub向け、日本語）
-- 記載内容: プロジェクト概要・主要機能・技術スタック・セットアップ手順・環境変数・ビルド方法・テスト方法・プロジェクト構成・バックエンド連携・Android対応バージョン・ライセンス
-- 参照ファイル: `app.json` / `eas.json` / `tsconfig.json` / `.env.example` / `docs/architecture-design.md`
+## 8首・20首テスト追加（2026-03-14）
+
+### 実施内容
+学習一覧から8首テストと20首テストを直接起動できるボタンを追加。
+
+### 変更ファイル
+- `app/learn/index.tsx`
+  - `EIGHT_TEST_BLOCK_IDS` — 8首テストを表示するブロックIDセット（2,4,6,...,24,25）
+  - `TWENTY_TEST_BLOCKS` — 20首テストの範囲定義（ブロック5/10/15/20/25）
+  - `getEightTestRangeKey()` — 「現ブロックfrom-4」〜「現ブロックto」の範囲キー計算
+  - 展開時に緑系（8首）・紫系（20首）の追加ボタンを表示
+- `app/learn/[range]/test.tsx`
+  - `parseRangeKey()` を追加 — "1-8" / "1-20" のような任意の範囲文字列を解析
+  - `resolveTestType()` を追加 — 首数から "8首" / "20首" 等のラベルを返す
+  - `getBlockByRangeKey()` で見つからない場合に `parseRangeKey()` にフォールバック
+  - ヘッダーラベルを `block?.label ?? range.replace('-','〜')+'首'` で生成
+
+### 動作確認
+- TypeScript `npx tsc --noEmit` でエラーなし
+
+---
+
+## 次回やること（優先順）
+
+### 1. 実機での全画面動作確認
+ユーザーが各画面を操作して不具合を報告予定。以下を確認：
+- 学習6ステップの自動遷移と逐字表示
+- テストの音声自動再生・語呂ハイライト・不正解再選択
+- 間違えやすい問題のセット表示と問題方向
+- コンピューター対戦のAIタイマー動作
+- 実践問題（音声のみモード）
+- 復習のクイズ形式
+- ホーム画面のロック/アンロック
+
+### 2. ユーザー報告の不具合修正
+実機テスト結果に基づいて修正
+
+### 3. 既存Cloudflare Workers にBearer Token認証を追加
+- 対象: C:\Users\itonl\Desktop\01_Frontend\hyakunin-goromaru-cloudflare
+- `/api/auth/login`, `/api/auth/register` にtokenフィールド追加
+- Authorization: Bearer ヘッダー対応ミドルウェア
+- CORS: モバイルからのリクエスト許可
+
+### 4. 残りのタスク
+- assets/fonts/ にNoto Serif JPフォント配置
+- babel-plugin-transform-remove-console 導入（本番ビルド用）
+- バックエンド側レート制限設定
+- 本番ビルド（EAS production）→ Google Play Store申請
+
+## 注意事項
+- expo-file-system は `expo-file-system/legacy` からインポートすること（SDK 55対応）
+- react@19.2.4 を使用（expo install --fix が19.2.0に戻そうとするが無視してOK）
+- react-dom@19.2.0 がインストール済み（@expo/log-boxが依存）
+- react-test-renderer@19.2.4 を使用
+- npm install は `--legacy-peer-deps` が必要
+- coverage/ は .gitignore に追加済み

@@ -34,8 +34,8 @@ beforeEach(() => {
 });
 
 describe('studyStore 初期状態', () => {
-  it('currentStepが1', () => {
-    expect(useStudyStore.getState().currentStep).toBe(1);
+  it('currentStepが0（開始前状態）', () => {
+    expect(useStudyStore.getState().currentStep).toBe(0);
   });
 
   it('currentPoemIndexが0', () => {
@@ -66,29 +66,29 @@ describe('setPoems', () => {
     expect(useStudyStore.getState().currentPoemIndex).toBe(0);
   });
 
-  it('首をセットするとcurrentStepが1にリセットされる', () => {
+  it('首をセットするとcurrentStepが0にリセットされる', () => {
     act(() => {
       useStudyStore.getState().setPoems(samplePoems);
       useStudyStore.getState().nextStep();
       useStudyStore.getState().nextStep();
       useStudyStore.getState().setPoems(samplePoems);
     });
-    expect(useStudyStore.getState().currentStep).toBe(1);
+    expect(useStudyStore.getState().currentStep).toBe(0);
   });
 });
 
 describe('nextStep', () => {
   describe('正常系', () => {
-    it('ステップが1増加する', () => {
+    it('ステップが1増加する（0→1）', () => {
       act(() => {
         useStudyStore.getState().nextStep();
       });
-      expect(useStudyStore.getState().currentStep).toBe(2);
+      expect(useStudyStore.getState().currentStep).toBe(1);
     });
 
     it('TOTAL_STEPSまで進む', () => {
       act(() => {
-        for (let i = 1; i < TOTAL_STEPS; i++) {
+        for (let i = 0; i < TOTAL_STEPS; i++) {
           useStudyStore.getState().nextStep();
         }
       });
@@ -111,31 +111,41 @@ describe('nextStep', () => {
 
 describe('prevStep', () => {
   describe('正常系', () => {
-    it('ステップが1減少する', () => {
+    it('ステップが1減少する（2→1）', () => {
       act(() => {
-        useStudyStore.getState().nextStep();
-        useStudyStore.getState().prevStep();
+        useStudyStore.getState().nextStep(); // 0→1
+        useStudyStore.getState().nextStep(); // 1→2
+        useStudyStore.getState().prevStep(); // 2→1
       });
       expect(useStudyStore.getState().currentStep).toBe(1);
     });
 
     it('step=3からprevStepするとstep=2になる', () => {
       act(() => {
-        useStudyStore.getState().nextStep();
-        useStudyStore.getState().nextStep();
-        useStudyStore.getState().prevStep();
+        useStudyStore.getState().nextStep(); // 0→1
+        useStudyStore.getState().nextStep(); // 1→2
+        useStudyStore.getState().nextStep(); // 2→3
+        useStudyStore.getState().prevStep(); // 3→2
       });
       expect(useStudyStore.getState().currentStep).toBe(2);
     });
   });
 
   describe('境界値', () => {
-    it('step=1のときはそれ以上減らない', () => {
+    it('step=1のときprevStepを呼んでもstep=1のまま', () => {
+      act(() => {
+        useStudyStore.getState().nextStep(); // 0→1
+        useStudyStore.getState().prevStep(); // 1: learnStep > 1 でないため変化しない
+      });
+      expect(useStudyStore.getState().currentStep).toBe(1);
+    });
+
+    it('step=0のときprevStepを呼んでもstep=0のまま', () => {
       act(() => {
         useStudyStore.getState().prevStep();
         useStudyStore.getState().prevStep();
       });
-      expect(useStudyStore.getState().currentStep).toBe(1);
+      expect(useStudyStore.getState().currentStep).toBe(0);
     });
   });
 });
@@ -163,13 +173,13 @@ describe('nextPoem', () => {
       expect(useStudyStore.getState().currentPoemIndex).toBe(1);
     });
 
-    it('次の首に進むとcurrentStepが1にリセットされる', () => {
+    it('次の首に進むとcurrentStepが0にリセットされる', () => {
       act(() => {
         useStudyStore.getState().nextStep();
         useStudyStore.getState().nextStep();
         useStudyStore.getState().nextPoem();
       });
-      expect(useStudyStore.getState().currentStep).toBe(1);
+      expect(useStudyStore.getState().currentStep).toBe(0);
     });
   });
 
@@ -219,7 +229,7 @@ describe('reset', () => {
       useStudyStore.getState().reset();
     });
     const state = useStudyStore.getState();
-    expect(state.currentStep).toBe(1);
+    expect(state.currentStep).toBe(0);
     expect(state.currentPoemIndex).toBe(0);
     expect(state.poems).toEqual([]);
   });

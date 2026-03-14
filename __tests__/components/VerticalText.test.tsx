@@ -5,46 +5,38 @@ import VerticalText from '@/components/ui/VerticalText';
 describe('VerticalText', () => {
   describe('正常系 - 基本レンダリング', () => {
     it('テキストが文字単位で分割されてレンダリングされる', () => {
-      const { getAllByText } = render(<VerticalText text="あいう" />);
+      const { getAllByText } = render(<VerticalText lines={['あいう']} />);
       expect(getAllByText('あ')).toHaveLength(1);
       expect(getAllByText('い')).toHaveLength(1);
       expect(getAllByText('う')).toHaveLength(1);
     });
 
-    it('空文字を渡してもクラッシュしない', () => {
-      expect(() => render(<VerticalText text="" />)).not.toThrow();
+    it('空配列を渡してもクラッシュしない', () => {
+      expect(() => render(<VerticalText lines={[]} />)).not.toThrow();
     });
 
     it('1文字のテキストでもレンダリングできる', () => {
-      const { getByText } = render(<VerticalText text="あ" />);
+      const { getByText } = render(<VerticalText lines={['あ']} />);
       expect(getByText('あ')).toBeTruthy();
     });
   });
 
-  describe('正常系 - lineLength分割', () => {
-    it('デフォルトlineLength(3)で3文字ずつ行に分割される', () => {
-      const { getAllByText } = render(<VerticalText text="あいうえお" />);
-      // "あいう" で1行目、"えお" で2行目
+  describe('正常系 - 複数行', () => {
+    it('複数行配列で行ごとにレンダリングされる', () => {
+      const { getAllByText } = render(<VerticalText lines={['あいう', 'えお']} />);
       expect(getAllByText('あ')).toHaveLength(1);
       expect(getAllByText('え')).toHaveLength(1);
     });
 
-    it('lineLengthを指定できる', () => {
-      const { getAllByText } = render(<VerticalText text="あいうえお" lineLength={5} />);
+    it('1行のみでもレンダリングできる', () => {
+      const { getAllByText } = render(<VerticalText lines={['あいうえお']} />);
       expect(getAllByText('あ')).toHaveLength(1);
-    });
-
-    it('lineLength=1で1文字ずつ行が分かれる', () => {
-      const { getAllByText } = render(<VerticalText text="あい" lineLength={1} />);
-      expect(getAllByText('あ')).toHaveLength(1);
-      expect(getAllByText('い')).toHaveLength(1);
     });
   });
 
   describe('ハイライト - highlightRange', () => {
     it('highlightRangeを指定しない場合、全文字がデフォルト色でレンダリングされる', () => {
-      const { getAllByText } = render(<VerticalText text="あいう" />);
-      // ハイライトなしでも全文字が存在する
+      const { getAllByText } = render(<VerticalText lines={['あいう']} />);
       expect(getAllByText('あ')).toHaveLength(1);
       expect(getAllByText('い')).toHaveLength(1);
       expect(getAllByText('う')).toHaveLength(1);
@@ -54,7 +46,7 @@ describe('VerticalText', () => {
       expect(() =>
         render(
           <VerticalText
-            text="あいうえお"
+            lines={['あいうえお']}
             highlightRange={{ start: 1, length: 2 }}
           />,
         ),
@@ -65,7 +57,7 @@ describe('VerticalText', () => {
       expect(() =>
         render(
           <VerticalText
-            text="あいう"
+            lines={['あいう']}
             highlightRange={{ start: 0, length: 0 }}
           />,
         ),
@@ -76,7 +68,7 @@ describe('VerticalText', () => {
       expect(() =>
         render(
           <VerticalText
-            text="あいう"
+            lines={['あいう']}
             highlightRange={{ start: 0, length: 1 }}
             highlightColor="#ff0000"
           />,
@@ -87,25 +79,25 @@ describe('VerticalText', () => {
 
   describe('フォントサイズ', () => {
     it('fontSizeを指定してもクラッシュしない', () => {
-      expect(() => render(<VerticalText text="あ" fontSize={30} />)).not.toThrow();
+      expect(() => render(<VerticalText lines={['あ']} fontSize={30} />)).not.toThrow();
     });
 
     it('デフォルトのfontSize(22)でレンダリングできる', () => {
-      expect(() => render(<VerticalText text="あ" />)).not.toThrow();
+      expect(() => render(<VerticalText lines={['あ']} />)).not.toThrow();
     });
   });
 
   describe('境界値', () => {
     it('長い文字列（100文字）でもクラッシュしない', () => {
       const longText = 'あ'.repeat(100);
-      expect(() => render(<VerticalText text={longText} />)).not.toThrow();
+      expect(() => render(<VerticalText lines={[longText]} />)).not.toThrow();
     });
 
     it('highlightRangeが文字列の長さを超えても安全', () => {
       expect(() =>
         render(
           <VerticalText
-            text="あ"
+            lines={['あ']}
             highlightRange={{ start: 0, length: 100 }}
           />,
         ),
@@ -113,11 +105,11 @@ describe('VerticalText', () => {
     });
 
     it('日本語文字（漢字・カタカナ混在）でもレンダリングできる', () => {
-      expect(() => render(<VerticalText text="春の曙アイウ" />)).not.toThrow();
+      expect(() => render(<VerticalText lines={['春の曙アイウ']} />)).not.toThrow();
     });
 
     it('記号・絵文字を含む文字列でもクラッシュしない', () => {
-      expect(() => render(<VerticalText text="〇×△！" />)).not.toThrow();
+      expect(() => render(<VerticalText lines={['〇×△！']} />)).not.toThrow();
     });
   });
 

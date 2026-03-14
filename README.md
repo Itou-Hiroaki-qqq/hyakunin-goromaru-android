@@ -22,14 +22,14 @@
 
 | カテゴリ | 技術 |
 |---------|------|
-| フレームワーク | Expo SDK 52 / React Native 0.76 |
-| 言語 | TypeScript 5.x |
-| ルーティング | Expo Router v4（ファイルベース） |
-| 状態管理 | Zustand |
+| フレームワーク | Expo SDK 55 / React Native 0.83.2 |
+| 言語 | TypeScript 5.9 |
+| ルーティング | Expo Router v5（ファイルベース） |
+| 状態管理 | Zustand 5 |
 | APIクライアント | TanStack Query v5 + axios |
 | 認証 | expo-secure-store + JWT Bearer認証 |
 | 音声再生 | expo-av |
-| アニメーション | React Native Reanimated v3 |
+| アニメーション | React Native Reanimated 4 |
 | ローカルDB | expo-sqlite（復習データ管理） |
 | プッシュ通知 | expo-notifications（ローカル通知） |
 | ビルド・配布 | Expo EAS Build |
@@ -45,10 +45,10 @@
 
 - **Node.js** v18以上（[nodejs.org](https://nodejs.org/) からインストール）
 - **npm** v9以上（Node.jsに同梱）
-- **Expo CLI**（グローバルインストール推奨）
+- **EAS CLI**（クラウドビルド時に必要）
 
 ```bash
-npm install -g expo-cli eas-cli
+npm install -g eas-cli
 ```
 
 ---
@@ -65,8 +65,10 @@ cd hyakunin-goromaru-android
 ### 2. 依存パッケージをインストールする
 
 ```bash
-npm install
+npm install --legacy-peer-deps
 ```
+
+> `--legacy-peer-deps` は react-native-worklets 等のpeer deps競合を回避するために必要。
 
 ---
 
@@ -95,7 +97,9 @@ EXPO_PUBLIC_API_URL=https://your-api.workers.dev
 npx expo start
 ```
 
-起動後、ターミナルに表示されるQRコードを **Expo Go**（Android端末にインストール済み）で読み取るとアプリを確認できます。
+起動後、ターミナルに表示されるQRコードをAndroid端末の **Expo Go** で読み取るとアプリを確認できます。
+
+> 音声再生・SecureStoreなど一部のネイティブ機能はExpo Goでは動作しない。フル機能を確認するには後述のDevelopmentビルドAPKが必要。
 
 ---
 
@@ -124,7 +128,7 @@ eas login
 eas build --platform android --profile development
 ```
 
-開発クライアントがインストールされたAPKが生成されます。
+開発クライアントがインストールされたAPKが生成される。ビルド完了後にEASのページからAPKをダウンロードし、実機にインストールする。その後 `npx expo start --dev-client` で起動してQRコードを読み取る。
 
 ---
 
@@ -175,9 +179,10 @@ hyakunin-goromaru-android/
 │   │   ├── login.tsx
 │   │   └── register.tsx
 │   ├── learn/                    # 学習機能
-│   │   └── [blockId]/
-│   │       ├── study.tsx         # Studyモード（6ステップ）
-│   │       └── test.tsx          # Testモード（4択クイズ）
+│   │   ├── [range]/
+│   │   │   ├── study.tsx         # Studyモード（6ステップ）
+│   │   │   └── test.tsx          # Testモード（4択クイズ）
+│   │   └── all-test.tsx          # 全100首テスト
 │   ├── tricky/                   # 間違えやすい問題
 │   ├── battle/                   # コンピューター対戦
 │   ├── jissen/                   # 実践問題
@@ -267,4 +272,4 @@ Webアプリは httpOnly クッキー + JWT で動作していますが、Androi
 
 MIT License
 
-Copyright (c) 2025 hyakunin-goromaru
+Copyright (c) 2026 hyakunin-goromaru

@@ -13,8 +13,8 @@ import Header from '@/components/layout/Header';
 import { COLORS } from '@/constants/study';
 
 /**
- * 実践問題画面
- * 100首テストクリア後に解放されるリスニング問題
+ * 実践問題 入口画面
+ * 100首テストクリア後に解放される。解放済みなら play.tsx へ遷移。
  */
 export default function JissenScreen() {
   const router = useRouter();
@@ -23,7 +23,6 @@ export default function JissenScreen() {
     queryFn: getTestClears,
   });
 
-  // 100首テストクリア済みかどうか
   const isUnlocked = testClears.some(
     (c) => c.test_type === '100首' && c.range_key === 'all',
   );
@@ -34,13 +33,13 @@ export default function JissenScreen() {
       <View style={styles.content}>
         {isUnlocked ? (
           <>
-            <Text style={styles.unlockedTitle}>🏆 実践問題</Text>
+            <Text style={styles.unlockedTitle}>実践問題</Text>
             <Text style={styles.description}>
               音声を聞いて下の句を答える上位者向けモードです。
             </Text>
             <TouchableOpacity
               style={styles.startButton}
-              onPress={() => router.push('/learn/all-test')}
+              onPress={() => router.push('/jissen/play')}
             >
               <Text style={styles.startButtonText}>実践問題に挑戦</Text>
             </TouchableOpacity>
