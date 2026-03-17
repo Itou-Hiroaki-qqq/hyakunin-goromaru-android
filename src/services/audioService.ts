@@ -1,13 +1,12 @@
-import { Audio } from 'expo-av';
+import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
 import { audioCacheService } from './audioCacheService';
 
 /**
- * expo-avのAudio.Soundを管理するサービス
+ * expo-audioのAudioPlayerを管理するサービス
  * Howler.jsに相当する機能を提供する
  */
 class AudioService {
-  private sounds: Map<string, Audio.Sound> = new Map();
-  private currentSound: Audio.Sound | null = null;
+  private currentPlayer: AudioPlayer | null = null;
   /** 同時並行のplayOnce呼び出しを識別するカウンター */
   private playGeneration = 0;
   /** stopAll時にハングしたPromiseを解決するためのresolveコールバック */
@@ -17,175 +16,174 @@ class AudioService {
    * 音声モードを初期化する（アプリ起動時に1回呼ぶ）
    */
   async initialize(): Promise<void> {
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: false,
-      staysActiveInBackground: false,
-      playsInSilentModeIOS: true,
+    await setAudioModeAsync({
+      playsInSilentMode: true,
       shouldDuckAndroid: true,
+      shouldPlayInBackground: false,
     });
   }
 
   /**
-   * URLから音声を読み込む（キャッシュ優先）
+   * URLから音声プレーヤーを作成する（キャッシュ優先）
    */
-  async loadSound(url: string): Promise<Audio.Sound> {
+  async loadSound(url: string): Promise<AudioPlayer> {
     // キャッシュ済みのローカルパスを取得
     const localUri = await audioCacheService.getCachedUri(url);
-    const source = localUri ? { uri: localUri } : { uri: url };
+    const source = { uri: localUri || url };
 
-    const { sound } = await Audio.Sound.createAsync(source);
-    return sound;
+    const player = createAudioPlayer(source);
+    return player;
   }
 
   /**
    * 1回再生して完了を待つ
-   *
-   * 並行呼び出し対策:
-   * - generationカウンターにより、ローディング中に別のplayOnceが来た場合は
-   *   古いsoundを即座にunloadして処理を中断する
-   * - pendingResolveにより、stopAll()が呼ばれたときにPromiseがハングしない
    */
   async playOnce(url: string): Promise<void> {
-    // このplayOnce呼び出しの世代番号を確定する
     const gen = ++this.playGeneration;
 
     await this.stopAll();
 
-    // ロード中に別のplayOnceが呼ばれた場合はここで検出してキャンセル
-    const sound = await this.loadSound(url);
+    const player = await this.loadSound(url);
 
     if (gen !== this.playGeneration) {
-      // 自分より新しいplayOnceが既に起動している — このsoundは不要
-      sound.unloadAsync().catch(() => {});
+      player.remove();
       return;
     }
 
-    this.currentSound = sound;
+    this.currentPlayer = player;
 
     return new Promise<void>((resolve) => {
       this.pendingResolve = resolve;
 
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          sound.unloadAsync().catch(() => {});
-          if (this.currentSound === sound) {
-            this.currentSound = null;
+      const subscription = player.addListener('playbackStatusUpdate', (status) => {
+        if (status.didJustFinish) {
+          subscription.remove();
+          player.remove();
+          if (this.currentPlayer === player) {
+            this.currentPlayer = null;
           }
           this.pendingResolve = null;
           resolve();
         }
       });
 
-      sound.playAsync().catch((err) => {
+      try {
+        player.play();
+      } catch (err) {
         console.error('AudioService.playOnce error:', err);
+        subscription.remove();
         this.pendingResolve = null;
         resolve();
-      });
+      }
     });
   }
 
   /**
-   * プリロード済みの Sound を即再生する
-   *
-   * useGoroPlayback のように、ハイライト切替タイミングを制御しながら
-   * プリロード済み音声を再生したい場合に使う
+   * プリロード済みの AudioPlayer を即再生する
    */
-  async playLoadedSound(sound: Audio.Sound): Promise<void> {
+  async playLoadedSound(player: AudioPlayer): Promise<void> {
     const gen = ++this.playGeneration;
     await this.stopAll();
 
     if (gen !== this.playGeneration) {
-      sound.unloadAsync().catch(() => {});
+      player.remove();
       return;
     }
 
-    this.currentSound = sound;
+    this.currentPlayer = player;
 
     return new Promise<void>((resolve) => {
       this.pendingResolve = resolve;
 
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          sound.unloadAsync().catch(() => {});
-          if (this.currentSound === sound) {
-            this.currentSound = null;
+      const subscription = player.addListener('playbackStatusUpdate', (status) => {
+        if (status.didJustFinish) {
+          subscription.remove();
+          player.remove();
+          if (this.currentPlayer === player) {
+            this.currentPlayer = null;
           }
           this.pendingResolve = null;
           resolve();
         }
       });
 
-      sound.playAsync().catch((err) => {
+      try {
+        player.play();
+      } catch (err) {
         console.error('AudioService.playLoadedSound error:', err);
+        subscription.remove();
         this.pendingResolve = null;
         resolve();
-      });
+      }
     });
   }
 
   /**
    * 2つのURLを最小ギャップで連続再生する
-   *
-   * url2 を url1 再生中にプリロードしておくことで
-   * 音声切り替え時の loadSound 待ちを排除する
    */
   async playPair(url1: string, url2: string): Promise<void> {
     const gen = ++this.playGeneration;
     await this.stopAll();
 
-    // url1 をロードして再生しながら、url2 を並行プリロード
-    const sound1 = await this.loadSound(url1);
+    const player1 = await this.loadSound(url1);
     if (gen !== this.playGeneration) {
-      sound1.unloadAsync().catch(() => {});
+      player1.remove();
       return;
     }
 
-    const sound2Promise = this.loadSound(url2);
+    const player2Promise = this.loadSound(url2);
 
-    this.currentSound = sound1;
+    this.currentPlayer = player1;
     await new Promise<void>((resolve) => {
       this.pendingResolve = resolve;
-      sound1.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          sound1.unloadAsync().catch(() => {});
-          if (this.currentSound === sound1) this.currentSound = null;
+      const subscription = player1.addListener('playbackStatusUpdate', (status) => {
+        if (status.didJustFinish) {
+          subscription.remove();
+          player1.remove();
+          if (this.currentPlayer === player1) this.currentPlayer = null;
           this.pendingResolve = null;
           resolve();
         }
       });
-      sound1.playAsync().catch(() => {
+      try {
+        player1.play();
+      } catch {
+        subscription.remove();
         this.pendingResolve = null;
         resolve();
-      });
+      }
     });
 
     if (gen !== this.playGeneration) {
-      sound2Promise.then((s) => s.unloadAsync().catch(() => {}));
+      player2Promise.then((p) => p.remove());
       return;
     }
 
-    // sound2 は既にプリロード済み — 即座に再生
-    const sound2 = await sound2Promise;
+    const player2 = await player2Promise;
     if (gen !== this.playGeneration) {
-      sound2.unloadAsync().catch(() => {});
+      player2.remove();
       return;
     }
 
-    this.currentSound = sound2;
+    this.currentPlayer = player2;
     await new Promise<void>((resolve) => {
       this.pendingResolve = resolve;
-      sound2.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          sound2.unloadAsync().catch(() => {});
-          if (this.currentSound === sound2) this.currentSound = null;
+      const subscription = player2.addListener('playbackStatusUpdate', (status) => {
+        if (status.didJustFinish) {
+          subscription.remove();
+          player2.remove();
+          if (this.currentPlayer === player2) this.currentPlayer = null;
           this.pendingResolve = null;
           resolve();
         }
       });
-      sound2.playAsync().catch(() => {
+      try {
+        player2.play();
+      } catch {
+        subscription.remove();
         this.pendingResolve = null;
         resolve();
-      });
+      }
     });
   }
 
@@ -203,26 +201,22 @@ class AudioService {
 
   /**
    * 現在再生中の音声を停止する
-   *
-   * pendingResolveを先に解決することで、停止によってplayOnceのPromiseが
-   * ハングしたままになる問題を防ぐ
    */
   async stopAll(): Promise<void> {
-    // 再生完了待ちのPromiseがあれば先に解決しておく（ハング防止）
     if (this.pendingResolve) {
       const resolve = this.pendingResolve;
       this.pendingResolve = null;
       resolve();
     }
 
-    if (this.currentSound) {
+    if (this.currentPlayer) {
       try {
-        await this.currentSound.stopAsync();
-        await this.currentSound.unloadAsync();
+        this.currentPlayer.pause();
+        this.currentPlayer.remove();
       } catch {
         // 停止エラーは無視
       }
-      this.currentSound = null;
+      this.currentPlayer = null;
     }
   }
 
