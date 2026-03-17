@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
   char: {
     color: COLORS.textPrimary,
     lineHeight: 30,
-    fontFamily: 'serif',
+    fontFamily: 'NotoSerifJP',
   },
 });
 
