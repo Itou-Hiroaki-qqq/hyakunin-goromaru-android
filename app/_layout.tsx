@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -47,9 +47,10 @@ export default function RootLayout() {
     initApp();
   }, [restoreToken]);
 
-  const onLayoutRootView = useCallback(async () => {
+  // フォント読み込み完了後にスプラッシュスクリーンを非表示
+  useEffect(() => {
     if (fontsLoaded) {
-      await SplashScreen.hideAsync();
+      SplashScreen.hideAsync();
     }
   }, [fontsLoaded]);
 
@@ -65,7 +66,6 @@ export default function RootLayout() {
           headerShown: false,
           contentStyle: { backgroundColor: '#fffbf0' },
         }}
-        onLayout={onLayoutRootView}
       >
         <Stack.Screen name="index" />
         <Stack.Screen name="(auth)/login" />
