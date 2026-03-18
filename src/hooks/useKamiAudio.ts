@@ -21,12 +21,15 @@ export function useKamiAudio({
   poemsLength,
 }: UseKamiAudioOptions): void {
   const lastPlayedQRef = useRef<number | null>(null);
+  const lastPlayedPoemIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!current?.kami_audio_url || poemsLength === 0) return;
-    if (lastPlayedQRef.current === currentQ) return;
+    // 同じ問題番号 かつ 同じ句なら再生しない
+    if (lastPlayedQRef.current === currentQ && lastPlayedPoemIdRef.current === current.id) return;
     if (lastPlayedQRef.current != null) audioService.stopAll();
     lastPlayedQRef.current = currentQ;
+    lastPlayedPoemIdRef.current = current.id;
     audioService.playOnce(current.kami_audio_url);
     return () => {
       audioService.stopAll();

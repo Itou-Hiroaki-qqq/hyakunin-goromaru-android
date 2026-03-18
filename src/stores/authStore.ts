@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import { SECURE_STORE_KEYS } from '@/constants/api';
 import { getMe } from '@/api/auth';
+import { queryClient } from '@/lib/queryClient';
 import type { User } from '@/types/user';
 
 interface AuthState {
@@ -24,11 +25,16 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (token: string, user: User) => {
     await SecureStore.setItemAsync(SECURE_STORE_KEYS.AUTH_TOKEN, token);
     set({ token, user });
+    // 新ユーザーのデータを取得するためキャッシュを無効化
+    queryClient.invalidateQueries({ queryKey: ['testClears'] });
+    queryClient.invalidateQueries({ queryKey: ['testBestScores'] });
   },
 
   logout: async () => {
     await SecureStore.deleteItemAsync(SECURE_STORE_KEYS.AUTH_TOKEN);
     set({ token: null, user: null });
+    // 前ユーザーのデータをクリア
+    queryClient.clear();
   },
 
   restoreToken: async () => {

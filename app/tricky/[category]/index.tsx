@@ -8,9 +8,12 @@ import {
   ScrollView,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
 import Header from '@/components/layout/Header';
 import { COLORS } from '@/constants/study';
 import { KAMI_TRICKY_SETS, SHIMO_TRICKY_SETS } from '@/data/tricky-questions';
+import { getTestClears } from '@/api/testClears';
+import StarBadge from '@/components/ui/StarBadge';
 
 /**
  * 間違えやすい問題 セット一覧画面
@@ -30,6 +33,24 @@ export default function TrickyCategoryIndexScreen() {
   // 全セットの問題数（各セットの句ID数の合計）
   const totalQuestionCount = sets.reduce((sum, set) => sum + set.poemIds.length, 0);
 
+  const { data: testClears = [] } = useQuery({
+    queryKey: ['testClears'],
+    queryFn: getTestClears,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const trickyType = isKami ? 'tricky_kami' : 'tricky_shimo';
+
+  const isSetCleared = (setIdStr: string): boolean => {
+    return testClears.some(
+      (c) => c.test_type === trickyType && c.range_key === setIdStr,
+    );
+  };
+
+  const isSummaryCleared = testClears.some(
+    (c) => c.test_type === trickyType && c.range_key === 'all',
+  );
+
   return (
     <SafeAreaView style={styles.safe}>
       <Header title={title} showBack />
@@ -46,9 +67,12 @@ export default function TrickyCategoryIndexScreen() {
           }
           activeOpacity={0.8}
         >
-          <Text style={styles.summaryButtonText}>
-            まとめテスト（全{totalQuestionCount}問）
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <StarBadge cleared={isSummaryCleared} size={18} />
+            <Text style={styles.summaryButtonText}>
+              まとめテスト（全{totalQuestionCount}問）
+            </Text>
+          </View>
         </TouchableOpacity>
 
         {sets.map((set) => (
@@ -63,7 +87,10 @@ export default function TrickyCategoryIndexScreen() {
             activeOpacity={0.8}
           >
             <View style={styles.cardText}>
-              <Text style={styles.setLabel}>セット {set.id}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <StarBadge cleared={isSetCleared(set.id)} size={18} />
+                <Text style={styles.setLabel}>セット {set.id}</Text>
+              </View>
               <Text style={styles.poemIds}>
                 {set.poemIds.length}首の組み合わせ（#
                 {set.poemIds.join(' / #')}）

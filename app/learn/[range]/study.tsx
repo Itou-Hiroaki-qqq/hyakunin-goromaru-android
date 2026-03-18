@@ -415,8 +415,9 @@ const styles = StyleSheet.create({
     lineHeight: 28,
   },
   hiraganaText: {
-    fontSize: 14,
-    color: '#666666',
+    fontSize: 15,
+    color: '#333333',
+    fontWeight: '600',
     lineHeight: 22,
     marginTop: 2,
   },

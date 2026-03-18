@@ -37,12 +37,33 @@ export default function LearnIndexScreen() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // ブロックのクリア状況を確認する
-  const isBlockCleared = (rangeKey: string): boolean => {
+  // ブロックのクリア状況を確認する（そのブロックの最後のテストで判定）
+  const isBlockCleared = (block: (typeof BLOCKS)[0]): boolean => {
+    // 20首テストがあるブロック → 20首クリアで星
+    if (TWENTY_TEST_BLOCKS[block.id]) {
+      const twenty = TWENTY_TEST_BLOCKS[block.id];
+      const rangeKey = `${twenty.from}-${twenty.to}`;
+      return testClears.some(
+        (c) => c.range_key === rangeKey && c.test_type === '20首',
+      );
+    }
+    // 8首テストがあるブロック → 8首クリアで星
+    if (EIGHT_TEST_BLOCK_IDS.has(block.id)) {
+      const eightFrom = block.from - 4;
+      const rangeKey = `${eightFrom}-${block.to}`;
+      return testClears.some(
+        (c) => c.range_key === rangeKey && c.test_type === '8首',
+      );
+    }
+    // 4首テストのみ → 4首クリアで星
     return testClears.some(
-      (c) => c.range_key === rangeKey && c.test_type === '4首',
+      (c) => c.range_key === block.rangeKey && c.test_type === '4首',
     );
   };
+
+  const isAllCleared = testClears.some(
+    (c) => c.test_type === '100首' && c.range_key === 'all',
+  );
 
   const handleToggleBlock = (blockId: number) => {
     setExpandedBlock((prev) => (prev === blockId ? null : blockId));
@@ -50,7 +71,7 @@ export default function LearnIndexScreen() {
 
   const renderBlock = ({ item }: { item: (typeof BLOCKS)[0] }) => {
     const isExpanded = expandedBlock === item.id;
-    const cleared = isBlockCleared(item.rangeKey);
+    const cleared = isBlockCleared(item);
 
     const showEightTest = EIGHT_TEST_BLOCK_IDS.has(item.id);
     const twentyTestInfo = TWENTY_TEST_BLOCKS[item.id];
@@ -147,7 +168,10 @@ export default function LearnIndexScreen() {
               style={styles.allTestButton}
               onPress={() => router.push('/learn/all-test')}
             >
-              <Text style={styles.allTestButtonText}>100首テストに挑戦 🏆</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <StarBadge cleared={isAllCleared} size={22} />
+                <Text style={styles.allTestButtonText}>100首テストに挑戦 🏆</Text>
+              </View>
             </TouchableOpacity>
           </View>
         }

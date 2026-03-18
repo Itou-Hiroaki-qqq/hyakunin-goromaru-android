@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useReview } from '@/hooks/useReview';
 import { useAllPoems } from '@/hooks/usePoems';
 import { useKamiAudio } from '@/hooks/useKamiAudio';
@@ -36,6 +37,7 @@ interface ReviewQuizItem {
  * - 「復習からはずす」で削除、「次へ」で次の問題へ
  */
 export default function ReviewIndexScreen() {
+  const router = useRouter();
   const { items, isLoading, removeItem, reload } = useReview();
   const { data: allPoems } = useAllPoems();
 
@@ -75,9 +77,11 @@ export default function ReviewIndexScreen() {
     currentGoroPoemIdRef.current = currentPoem?.id ?? null;
   }, [currentPoem?.id]);
 
-  // 復習アイテムからクイズ問題を生成
+  // 復習アイテムからクイズ問題を生成（初回のみ）
+  const quizInitializedRef = useRef(false);
   useEffect(() => {
-    if (!allPoems || items.length === 0) return;
+    if (!allPoems || items.length === 0 || quizInitializedRef.current) return;
+    quizInitializedRef.current = true;
     const generated: ReviewQuizItem[] = items
       .map((item) => {
         const poem = allPoems.find((p) => p.id === item.poem_id);
@@ -115,9 +119,19 @@ export default function ReviewIndexScreen() {
   const handleRemove = useCallback(async () => {
     if (!currentPoem) return;
     await removeItem(currentPoem.id);
-    // リロード後に quizItems が再生成される
-    // currentIndex はそのままにしておく（次の問題が来る）
-  }, [currentPoem, removeItem]);
+    // 音声停止＋語呂ハイライトリセット
+    resetGoroHighlight();
+    // ローカルのquizItemsから現在の問題を削除
+    const newItems = quizItems.filter((_, i) => i !== currentIndex);
+    setQuizItems(newItems);
+    // 状態をリセット（次の問題用）
+    setClickedWrong([]);
+    setSelectedCorrect(false);
+    // currentIndexがはみ出す場合は調整（末尾だった場合）
+    if (currentIndex >= newItems.length && newItems.length > 0) {
+      setCurrentIndex(newItems.length - 1);
+    }
+  }, [currentPoem, currentIndex, quizItems, removeItem, resetGoroHighlight]);
 
   const handleNext = useCallback(() => {
     resetGoroHighlight();
@@ -125,14 +139,20 @@ export default function ReviewIndexScreen() {
       setCurrentIndex((i) => i + 1);
       setClickedWrong([]);
       setSelectedCorrect(false);
-    } else {
-      // 全問完了したらリロード
-      reload();
-      setCurrentIndex(0);
-      setClickedWrong([]);
-      setSelectedCorrect(false);
     }
-  }, [currentIndex, quizItems.length, resetGoroHighlight, reload]);
+    // 最終問題の場合は handleNext を呼ばない（専用ボタンで処理）
+  }, [currentIndex, quizItems.length, resetGoroHighlight]);
+
+  /** もう一度復習する */
+  const handleRestart = useCallback(() => {
+    resetGoroHighlight();
+    quizInitializedRef.current = false;
+    reload();
+    setCurrentIndex(0);
+    setClickedWrong([]);
+    setSelectedCorrect(false);
+    setGoroPlayKey(0);
+  }, [resetGoroHighlight, reload]);
 
   if (isLoading) {
     return (
@@ -237,15 +257,32 @@ export default function ReviewIndexScreen() {
         )}
 
         {/* 正解後のボタン */}
-        {selectedCorrect && (
+        {selectedCorrect && currentIndex < quizItems.length - 1 && (
           <View style={styles.actionButtons}>
             <TouchableOpacity style={styles.removeButton} onPress={handleRemove}>
               <Text style={styles.removeButtonText}>復習からはずす</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-              <Text style={styles.nextButtonText}>
-                {currentIndex < quizItems.length - 1 ? '次へ →' : '完了'}
-              </Text>
+              <Text style={styles.nextButtonText}>次へ →</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* 最終問題の正解後ボタン */}
+        {selectedCorrect && currentIndex >= quizItems.length - 1 && (
+          <View style={styles.actionButtons}>
+            <TouchableOpacity style={styles.removeButton} onPress={handleRemove}>
+              <Text style={styles.removeButtonText}>復習からはずす</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {selectedCorrect && currentIndex >= quizItems.length - 1 && (
+          <View style={styles.finalButtons}>
+            <TouchableOpacity style={styles.backButton} onPress={() => router.replace('/')}>
+              <Text style={styles.backButtonText}>戻る</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.nextButton} onPress={handleRestart}>
+              <Text style={styles.nextButtonText}>もう一度復習する</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -320,4 +357,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   nextButtonText: { color: COLORS.surface, fontSize: 15, fontWeight: '700' },
+  finalButtons: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  backButton: {
+    flex: 1,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+    borderRadius: 10,
+    padding: 14,
+    alignItems: 'center',
+  },
+  backButtonText: { color: COLORS.primary, fontSize: 15, fontWeight: '700' },
 });

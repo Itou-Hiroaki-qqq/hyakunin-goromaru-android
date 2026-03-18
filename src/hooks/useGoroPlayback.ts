@@ -78,23 +78,22 @@ export function useGoroPlayback({
         const shimoUrl = current.shimo_goro_audio_url;
 
         if (kamiUrl && shimoUrl) {
-          // playPair でプリロード済みの連続再生（ギャップ最小）
-          // ただしハイライト切替のため、kami 部分だけ先に再生
-          const kamiSound = await audioService.loadSound(kamiUrl);
-          if (!isMountedRef.current) { kamiSound.remove(); return; }
-          if (currentGoroPoemIdRef && currentGoroPoemIdRef.current !== poemId) { kamiSound.remove(); return; }
+          // 両方を並行でプリダウンロード
+          const [kamiUri, shimoUri] = await Promise.all([
+            audioService.preload(kamiUrl),
+            audioService.preload(shimoUrl),
+          ]);
+          if (!isMountedRef.current) return;
+          if (currentGoroPoemIdRef && currentGoroPoemIdRef.current !== poemId) return;
 
-          // shimo を並行プリロード
-          const shimoSoundPromise = audioService.loadSound(shimoUrl);
+          // 上の句語呂を再生
+          await audioService.playPreloaded(kamiUri);
+          if (!isMountedRef.current) return;
+          if (currentGoroPoemIdRef && currentGoroPoemIdRef.current !== poemId) return;
 
-          await audioService.playLoadedSound(kamiSound);
-          if (!isMountedRef.current) { shimoSoundPromise.then(s => s.remove()); return; }
-          if (currentGoroPoemIdRef && currentGoroPoemIdRef.current !== poemId) { shimoSoundPromise.then(s => s.remove()); return; }
-
+          // 下の句語呂を再生
           setGoroHighlightPhase('shimo');
-          const shimoSound = await shimoSoundPromise;
-          if (!isMountedRef.current) { shimoSound.remove(); return; }
-          await audioService.playLoadedSound(shimoSound);
+          await audioService.playPreloaded(shimoUri);
         } else if (kamiUrl) {
           await audioService.playOnce(kamiUrl);
           if (!isMountedRef.current) return;

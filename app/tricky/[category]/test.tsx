@@ -13,6 +13,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAllPoems } from '@/hooks/usePoems';
 import { useGoroPlayback } from '@/hooks/useGoroPlayback';
 import { reviewDatabase } from '@/services/reviewDatabase';
+import { useAuthStore } from '@/stores/authStore';
+import { postTestClear } from '@/api/testClears';
+import { queryClient } from '@/lib/queryClient';
 import ChoiceCard from '@/components/ui/ChoiceCard';
 import PoemCard from '@/components/ui/PoemCard';
 import Header from '@/components/layout/Header';
@@ -52,6 +55,7 @@ export default function TrickyTestScreen() {
   }>();
   const isKami = category === 'kami';
 
+  const { user } = useAuthStore();
   const { data: allPoems, isLoading } = useAllPoems();
 
   const [questions, setQuestions] = useState<TrickyQuizItem[]>([]);
@@ -198,9 +202,21 @@ export default function TrickyTestScreen() {
         }
       }
 
+      // テストクリア判定（最後の問題を含めた一発正解数）
+      const finalScore = score + (selectedCorrect && clickedWrong.length === 0 ? 1 : 0);
+      const isAllCorrect = finalScore === questions.length;
+
+      if (user && isAllCorrect) {
+        const trickyType = isKami ? 'tricky_kami' : 'tricky_shimo';
+        const rangeKey = setId && setId !== 'all' ? setId : 'all';
+        postTestClear({ test_type: trickyType, range_key: rangeKey })
+          .then(() => queryClient.invalidateQueries({ queryKey: ['testClears'] }))
+          .catch(() => {});
+      }
+
       Alert.alert(
         '完了！',
-        `${questions.length}問中 ${score + (selectedCorrect ? 1 : 0)}問正解`,
+        `${questions.length}問中 ${finalScore}問正解（一発正解）`,
         buttons,
       );
       return;

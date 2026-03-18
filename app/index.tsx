@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/authStore';
 import { getTestClears } from '@/api/testClears';
@@ -42,10 +43,12 @@ export default function HomeScreen() {
 
   const [hasReview, setHasReview] = useState(false);
 
-  // 起動時に復習データを確認
-  useEffect(() => {
-    reviewDatabase.getAll().then((items) => setHasReview(items.length > 0)).catch(() => {});
-  }, []);
+  // 画面がフォーカスされるたびに復習データを確認
+  useFocusEffect(
+    useCallback(() => {
+      reviewDatabase.getAll().then((items) => setHasReview(items.length > 0)).catch(() => {});
+    }, [])
+  );
 
   // 100首テストクリア済みか
   const isAllCleared = testClears.some(
@@ -106,6 +109,11 @@ export default function HomeScreen() {
         contentContainerStyle={styles.navGrid}
         showsVerticalScrollIndicator={false}
       >
+        {!user && (
+          <Text style={styles.notLoggedInText}>
+            未ログインのためスコアは保存されません
+          </Text>
+        )}
         {NAV_ITEMS.map((item) => {
           const isLocked = item.requiresUnlock;
           return (
@@ -189,6 +197,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: 'rgba(255,255,255,0.9)',
     textDecorationLine: 'underline',
+  },
+  notLoggedInText: {
+    fontSize: 13,
+    color: '#ef4444',
+    textAlign: 'center',
+    marginBottom: 4,
   },
   navGrid: {
     padding: 16,

@@ -96,6 +96,7 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     lineHeight: 30,
     fontFamily: 'NotoSerifJP',
+    fontWeight: 'bold',
   },
 });
 

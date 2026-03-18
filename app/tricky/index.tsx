@@ -8,9 +8,12 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
 import Header from '@/components/layout/Header';
 import { COLORS } from '@/constants/study';
 import { KAMI_TRICKY_SETS, SHIMO_TRICKY_SETS } from '@/data/tricky-questions';
+import { getTestClears } from '@/api/testClears';
+import StarBadge from '@/components/ui/StarBadge';
 
 interface TrickyCategory {
   key: string;
@@ -41,6 +44,20 @@ const CATEGORIES: TrickyCategory[] = [
 export default function TrickyIndexScreen() {
   const router = useRouter();
 
+  const { data: testClears = [] } = useQuery({
+    queryKey: ['testClears'],
+    queryFn: getTestClears,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // カテゴリ内の全セットがクリアされているか（まとめテストクリアで判定）
+  const isCategoryCleared = (key: string): boolean => {
+    const trickyType = key === 'kami' ? 'tricky_kami' : 'tricky_shimo';
+    return testClears.some(
+      (c) => c.test_type === trickyType && c.range_key === 'all',
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <Header title="間違えやすい問題" showBack />
@@ -58,7 +75,10 @@ export default function TrickyIndexScreen() {
             activeOpacity={0.8}
           >
             <View style={styles.cardText}>
-              <Text style={styles.cardTitle}>{cat.title}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <StarBadge cleared={isCategoryCleared(cat.key)} size={20} />
+                <Text style={styles.cardTitle}>{cat.title}</Text>
+              </View>
               <Text style={styles.cardDesc}>{cat.description}</Text>
               <Text style={styles.cardCount}>{cat.setCount}セット</Text>
             </View>

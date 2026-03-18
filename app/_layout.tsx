@@ -1,25 +1,16 @@
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore } from '@/stores/authStore';
 import { reviewDatabase } from '@/services/reviewDatabase';
 import { audioService } from '@/services/audioService';
+import { queryClient } from '@/lib/queryClient';
 
 // スプラッシュスクリーンを自動非表示にしない（フォント読み込み完了まで表示）
 SplashScreen.preventAutoHideAsync();
-
-// TanStack Queryのグローバルクライアント設定
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 2,
-      staleTime: 5 * 60 * 1000, // 5分
-    },
-  },
-});
 
 /**
  * ルートレイアウト

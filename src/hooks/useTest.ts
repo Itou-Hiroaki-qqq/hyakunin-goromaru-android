@@ -4,6 +4,7 @@ import { reviewDatabase } from '@/services/reviewDatabase';
 import { postTestBestScore } from '@/api/testBestScores';
 import { postTestClear } from '@/api/testClears';
 import { useAuthStore } from '@/stores/authStore';
+import { queryClient } from '@/lib/queryClient';
 import { useKamiAudio } from './useKamiAudio';
 import { useGoroPlayback } from './useGoroPlayback';
 import { generateQuizQuestions } from '@/utils/poemUtils';
@@ -127,6 +128,8 @@ export function useTest(options: UseTestOptions) {
           test_type: options.testType,
           range_key: options.rangeKey,
         }).catch(() => {});
+        // 星の即時反映のためキャッシュを無効化
+        queryClient.invalidateQueries({ queryKey: ['testClears'] });
       }
     }
   }, [questions.length, score, bestConsecutive, user, options.testType, options.rangeKey]);
