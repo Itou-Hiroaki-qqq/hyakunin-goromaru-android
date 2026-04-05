@@ -32,6 +32,10 @@ export async function logout(): Promise<void> {
   await apiClient.post(API_ENDPOINTS.AUTH_LOGOUT);
 }
 
+export async function deleteAccount(): Promise<void> {
+  await apiClient.delete(API_ENDPOINTS.AUTH_DELETE_ACCOUNT);
+}
+
 export async function getMe(): Promise<User | null> {
   try {
     const response = await apiClient.get<{ user: User }>(API_ENDPOINTS.AUTH_ME);

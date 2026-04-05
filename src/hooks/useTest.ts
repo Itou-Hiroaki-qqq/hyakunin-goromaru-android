@@ -1,4 +1,5 @@
 import { useCallback, useRef } from 'react';
+import { Alert } from 'react-native';
 import { useTestStore } from '@/stores/testStore';
 import { reviewDatabase } from '@/services/reviewDatabase';
 import { postTestBestScore } from '@/api/testBestScores';
@@ -77,11 +78,14 @@ export function useTest(options: UseTestOptions) {
    */
   const initTest = useCallback(
     (targetPoems: Poem[], allPoems: Poem[]) => {
+      resetGoroHighlight();
+      lastGoroPlayKeyRef.current = 0;
+      goroRunInProgressRef.current = false;
       reset();
       const quizQuestions = generateQuizQuestions(targetPoems, allPoems);
       setQuestions(quizQuestions);
     },
-    [reset, setQuestions],
+    [reset, setQuestions, resetGoroHighlight],
   );
 
   /**
@@ -118,18 +122,26 @@ export function useTest(options: UseTestOptions) {
     const isAllCorrect = score === totalQuestions;
 
     if (user) {
+      let saveFailed = false;
       const testKey = `${options.testType}:${options.rangeKey}`;
       await postTestBestScore({ test_key: testKey, best_score: bestConsecutive }).catch(
-        () => {},
+        () => { saveFailed = true; },
       );
 
       if (isAllCorrect) {
         await postTestClear({
           test_type: options.testType,
           range_key: options.rangeKey,
-        }).catch(() => {});
+        }).catch(() => { saveFailed = true; });
         // 星の即時反映のためキャッシュを無効化
         queryClient.invalidateQueries({ queryKey: ['testClears'] });
+      }
+
+      if (saveFailed) {
+        Alert.alert(
+          'スコア保存エラー',
+          'スコアの保存に失敗しました。通信状態を確認して、もう一度テストをお試しください。',
+        );
       }
     }
   }, [questions.length, score, bestConsecutive, user, options.testType, options.rangeKey]);

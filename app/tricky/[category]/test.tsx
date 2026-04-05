@@ -160,6 +160,7 @@ export default function TrickyTestScreen() {
           text: 'もう一度',
           onPress: () => {
             if (!allPoems) return;
+            resetGoroHighlight();
             const sets = isKami ? KAMI_TRICKY_SETS : SHIMO_TRICKY_SETS;
             const targetSets =
               setId && setId !== 'all' ? sets.filter((s) => s.id === setId) : sets;
@@ -181,6 +182,8 @@ export default function TrickyTestScreen() {
             setClickedWrong([]);
             setSelectedCorrect(false);
             setGoroPlayKey(0);
+            lastGoroPlayKeyRef.current = 0;
+            goroRunInProgressRef.current = false;
           },
         },
       ];

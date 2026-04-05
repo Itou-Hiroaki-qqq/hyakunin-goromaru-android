@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore } from '@/stores/authStore';
@@ -9,7 +10,7 @@ import { reviewDatabase } from '@/services/reviewDatabase';
 import { audioService } from '@/services/audioService';
 import { queryClient } from '@/lib/queryClient';
 
-// スプラッシュスクリーンを自動非表示にしない（フォント読み込み完了まで表示）
+// スプラッシュスクリーンを自動非表示にしない（初期化完了まで表示）
 SplashScreen.preventAutoHideAsync();
 
 /**
@@ -18,9 +19,11 @@ SplashScreen.preventAutoHideAsync();
  * - アプリ起動時に認証トークンを復元
  * - SQLiteとAudio初期化
  * - Noto Serif JP フォント読み込み
+ * - フォント + 初期化の両方が完了するまでスプラッシュスクリーンを表示
  */
 export default function RootLayout() {
   const restoreToken = useAuthStore((s) => s.restoreToken);
+  const [appReady, setAppReady] = useState(false);
 
   const [fontsLoaded] = useFonts({
     'NotoSerifJP': require('../assets/fonts/NotoSerifJP-Regular.ttf'),
@@ -34,45 +37,48 @@ export default function RootLayout() {
       await reviewDatabase.init().catch(console.error);
       // 音声サービス初期化
       await audioService.initialize().catch(console.error);
+      setAppReady(true);
     };
     initApp();
   }, [restoreToken]);
 
-  // フォント読み込み完了後にスプラッシュスクリーンを非表示
+  // フォント読み込み + アプリ初期化の両方が完了したらスプラッシュを非表示
   useEffect(() => {
-    if (fontsLoaded) {
+    if (fontsLoaded && appReady) {
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded]);
+  }, [fontsLoaded, appReady]);
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded || !appReady) {
     return null;
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <StatusBar style="light" backgroundColor="#f5a623" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: '#fffbf0' },
-        }}
-      >
-        <Stack.Screen name="index" />
-        <Stack.Screen name="(auth)/login" />
-        <Stack.Screen name="(auth)/register" />
-        <Stack.Screen name="learn/index" />
-        <Stack.Screen name="learn/[range]/study" />
-        <Stack.Screen name="learn/[range]/test" />
-        <Stack.Screen name="learn/all-test" />
-        <Stack.Screen name="tricky/index" />
-        <Stack.Screen name="tricky/[category]/test" />
-        <Stack.Screen name="battle/index" />
-        <Stack.Screen name="battle/play" />
-        <Stack.Screen name="jissen/index" />
-        <Stack.Screen name="review/index" />
-        <Stack.Screen name="review/study" />
-      </Stack>
-    </QueryClientProvider>
+    <SafeAreaProvider>
+      <QueryClientProvider client={queryClient}>
+        <StatusBar style="light" backgroundColor="#f5a623" />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: '#fffbf0' },
+          }}
+        >
+          <Stack.Screen name="index" />
+          <Stack.Screen name="(auth)/login" />
+          <Stack.Screen name="(auth)/register" />
+          <Stack.Screen name="learn/index" />
+          <Stack.Screen name="learn/[range]/study" />
+          <Stack.Screen name="learn/[range]/test" />
+          <Stack.Screen name="learn/all-test" />
+          <Stack.Screen name="tricky/index" />
+          <Stack.Screen name="tricky/[category]/test" />
+          <Stack.Screen name="battle/index" />
+          <Stack.Screen name="battle/play" />
+          <Stack.Screen name="jissen/index" />
+          <Stack.Screen name="review/index" />
+          <Stack.Screen name="review/study" />
+        </Stack>
+      </QueryClientProvider>
+    </SafeAreaProvider>
   );
 }

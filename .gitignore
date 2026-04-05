@@ -3,6 +3,9 @@
 # Claude memory (contains project-specific URLs and IDs)
 .claude/
 
+# Keystore credentials (never commit)
+keystore.properties
+
 # dependencies
 node_modules/
 

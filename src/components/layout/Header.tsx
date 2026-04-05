@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { COLORS } from '@/constants/study';
 
@@ -14,9 +15,10 @@ interface HeaderProps {
  */
 const Header = memo(({ title, showBack = false, rightElement }: HeaderProps) => {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
       {showBack ? (
         <TouchableOpacity
           onPress={() => router.back()}
@@ -56,6 +58,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 18,
     fontWeight: 'bold',
+    fontFamily: 'NotoSerifJP',
     color: COLORS.surface,
     textAlign: 'center',
   },

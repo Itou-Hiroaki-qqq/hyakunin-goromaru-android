@@ -98,14 +98,14 @@ export default function LearnIndexScreen() {
                 style={styles.actionButton}
                 onPress={() => router.push(`/learn/${item.rangeKey}/study`)}
               >
-                <Text style={styles.actionButtonText}>📚 Study</Text>
+                <Text style={styles.actionButtonText}>📚 練習</Text>
                 <Text style={styles.actionSubtext}>2ステップで覚える</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionButton, styles.testButton]}
                 onPress={() => router.push(`/learn/${item.rangeKey}/test`)}
               >
-                <Text style={styles.actionButtonText}>✏️ Test</Text>
+                <Text style={styles.actionButtonText}>✏️ 力試し</Text>
                 <Text style={styles.actionSubtext}>4首テスト</Text>
               </TouchableOpacity>
             </View>
@@ -228,6 +228,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontWeight: '600',
+    fontFamily: 'NotoSerifJP',
     color: COLORS.textPrimary,
   },
   expandIcon: {

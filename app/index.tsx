@@ -6,12 +6,15 @@ import {
   StyleSheet,
   ScrollView,
   SafeAreaView,
+  Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/authStore';
 import { getTestClears } from '@/api/testClears';
+import { deleteAccount } from '@/api/auth';
 import { reviewDatabase } from '@/services/reviewDatabase';
 import { COLORS } from '@/constants/study';
 
@@ -33,6 +36,7 @@ interface NavItem {
  */
 export default function HomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
 
   const { data: testClears = [] } = useQuery({
@@ -93,7 +97,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 24 }]}>
         <Text style={styles.appTitle}>百人一首</Text>
         <Text style={styles.appSubtitle}>ゴロでマル覚え</Text>
         {user ? (
@@ -150,14 +154,56 @@ export default function HomeScreen() {
         })}
 
         {user && (
-          <TouchableOpacity
-            style={styles.logoutButton}
-            onPress={async () => {
-              await useAuthStore.getState().logout();
-            }}
-          >
-            <Text style={styles.logoutText}>ログアウト</Text>
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={async () => {
+                await useAuthStore.getState().logout();
+              }}
+            >
+              <Text style={styles.logoutText}>ログアウト</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.deleteAccountButton}
+              onPress={() => {
+                Alert.alert(
+                  'アカウント削除',
+                  'アカウントを削除すると、学習データ（テストクリア履歴・ベストスコア）がすべて失われます。この操作は取り消せません。\n\n本当に削除しますか？',
+                  [
+                    { text: 'キャンセル', style: 'cancel' },
+                    {
+                      text: '削除する',
+                      style: 'destructive',
+                      onPress: () => {
+                        Alert.alert(
+                          '最終確認',
+                          '本当にアカウントを完全に削除しますか？',
+                          [
+                            { text: 'やめる', style: 'cancel' },
+                            {
+                              text: '完全に削除',
+                              style: 'destructive',
+                              onPress: async () => {
+                                try {
+                                  await deleteAccount();
+                                  await useAuthStore.getState().logout();
+                                  Alert.alert('完了', 'アカウントが削除されました。');
+                                } catch {
+                                  Alert.alert('エラー', 'アカウント削除に失敗しました。通信状態を確認してもう一度お試しください。');
+                                }
+                              },
+                            },
+                          ]
+                        );
+                      },
+                    },
+                  ]
+                );
+              }}
+            >
+              <Text style={styles.deleteAccountText}>アカウントを削除</Text>
+            </TouchableOpacity>
+          </>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -179,11 +225,13 @@ const styles = StyleSheet.create({
   appTitle: {
     fontSize: 32,
     fontWeight: 'bold',
+    fontFamily: 'NotoSerifJP',
     color: COLORS.surface,
     letterSpacing: 4,
   },
   appSubtitle: {
     fontSize: 14,
+    fontFamily: 'NotoSerifJP',
     color: 'rgba(255,255,255,0.85)',
     marginTop: 4,
   },
@@ -231,6 +279,7 @@ const styles = StyleSheet.create({
   navTitle: {
     fontSize: 17,
     fontWeight: '700',
+    fontFamily: 'NotoSerifJP',
     color: COLORS.textPrimary,
   },
   navTitleLocked: {
@@ -258,5 +307,15 @@ const styles = StyleSheet.create({
   logoutText: {
     color: COLORS.textSecondary,
     fontSize: 14,
+  },
+  deleteAccountButton: {
+    marginTop: 4,
+    padding: 14,
+    alignItems: 'center' as const,
+  },
+  deleteAccountText: {
+    color: '#9ca3af',
+    fontSize: 12,
+    textDecorationLine: 'underline' as const,
   },
 });

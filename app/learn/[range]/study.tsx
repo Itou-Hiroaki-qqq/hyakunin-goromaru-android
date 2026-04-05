@@ -159,7 +159,7 @@ export default function StudyScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safe}>
-        <Header title="Study" showBack />
+        <Header title="練習" showBack />
         <View style={styles.loading}>
           <ActivityIndicator size="large" color={COLORS.primary} />
           <Text style={styles.loadingText}>読み込み中...</Text>
@@ -171,7 +171,7 @@ export default function StudyScreen() {
   if (!currentPoem) {
     return (
       <SafeAreaView style={styles.safe}>
-        <Header title="Study" showBack />
+        <Header title="練習" showBack />
         <View style={styles.loading}>
           <Text style={styles.errorText}>データの読み込みに失敗しました</Text>
         </View>
@@ -218,7 +218,7 @@ export default function StudyScreen() {
 
     return (
       <SafeAreaView style={styles.safe}>
-        <Header title={`Study: ${block?.label ?? range}`} showBack />
+        <Header title={`練習: ${block?.label ?? range}`} showBack />
         <View style={styles.progressContainer}>
           <Text style={styles.progressText}>
             {currentPoemIndex + 1} / {storePoems.length}首 ・ ステップ 2 / 2
@@ -288,7 +288,7 @@ export default function StudyScreen() {
   // ======= 学習フェーズ（Step 0〜6）横書きカード =======
   return (
     <SafeAreaView style={styles.safe}>
-      <Header title={`Study: ${block?.label ?? range}`} showBack />
+      <Header title={`練習: ${block?.label ?? range}`} showBack />
 
       <View style={styles.progressContainer}>
         <Text style={styles.progressText}>

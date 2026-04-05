@@ -69,7 +69,7 @@ export default function TestScreen() {
   const testType  = resolveTestType(poemCount);
 
   // ヘッダー表示用ラベル
-  const headerLabel = block?.label ?? (range ? `${range.replace('-', '〜')}首` : 'Test');
+  const headerLabel = block?.label ?? (range ? `${range.replace('-', '〜')}首` : 'テスト');
 
   const { data: rangePoems, isLoading: isLoadingRange } = usePoems(from, to);
   const { data: allPoems, isLoading: isLoadingAll } = useAllPoems();
@@ -131,7 +131,7 @@ export default function TestScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safe}>
-        <Header title="Test" showBack />
+        <Header title="テスト" showBack />
         <View style={styles.center}>
           <ActivityIndicator size="large" color={COLORS.primary} />
         </View>
@@ -142,7 +142,7 @@ export default function TestScreen() {
   if (!currentQuestion) {
     return (
       <SafeAreaView style={styles.safe}>
-        <Header title="Test" showBack />
+        <Header title="テスト" showBack />
         <View style={styles.center}>
           <Text>データの読み込みに失敗しました</Text>
         </View>
@@ -168,7 +168,7 @@ export default function TestScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <Header title={`Test: ${headerLabel}`} showBack />
+      <Header title={`テスト: ${headerLabel}`} showBack />
 
       {/* 進捗 */}
       <View style={styles.progress}>

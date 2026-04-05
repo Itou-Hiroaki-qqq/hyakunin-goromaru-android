@@ -213,7 +213,7 @@ export default function BattlePlayScreen() {
   if (isLoading || questions.length === 0) {
     return (
       <SafeAreaView style={styles.safe}>
-        <Header title="Battle" showBack />
+        <Header title="対戦" showBack />
         <View style={styles.center}>
           <ActivityIndicator size="large" color={COLORS.primary} />
           <Text style={{ marginTop: 8, color: COLORS.textSecondary }}>準備中...</Text>
@@ -225,7 +225,7 @@ export default function BattlePlayScreen() {
   if (!currentQuestion) {
     return (
       <SafeAreaView style={styles.safe}>
-        <Header title="Battle" showBack />
+        <Header title="対戦" showBack />
         <View style={styles.center}>
           <ActivityIndicator size="large" color={COLORS.primary} />
         </View>
@@ -235,7 +235,7 @@ export default function BattlePlayScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <Header title={`Battle（${difficultyLabel}）`} showBack />
+      <Header title={`対戦（${difficultyLabel}）`} showBack />
 
       {/* スコアバー */}
       <View style={styles.scorebar}>
