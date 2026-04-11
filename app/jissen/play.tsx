@@ -11,10 +11,12 @@ import {
 import { useRouter } from 'expo-router';
 import { useAllPoems } from '@/hooks/usePoems';
 import { audioService } from '@/services/audioService';
+import { useGoroPlayback } from '@/hooks/useGoroPlayback';
 import ChoiceCard from '@/components/ui/ChoiceCard';
 import PoemCard from '@/components/ui/PoemCard';
 import Header from '@/components/layout/Header';
 import { COLORS } from '@/constants/study';
+import { findGoroRange } from '@/utils/goroUtils';
 import { generateQuizQuestion, shuffle } from '@/utils/poemUtils';
 import type { Poem } from '@/types/poem';
 
@@ -44,10 +46,30 @@ export default function JissenPlayScreen() {
   const [selectedCorrect, setSelectedCorrect] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [goroPlayKey, setGoroPlayKey] = useState(0);
 
   const lastPlayedIndexRef = useRef<number | null>(null);
+  const goroRunInProgressRef = useRef(false);
+  const currentGoroPoemIdRef = useRef<number | null>(null);
+  const lastGoroPlayKeyRef = useRef(0);
 
   const currentQuestion = questions[currentIndex] ?? null;
+
+  // 語呂ハイライトアニメーション（正解時のみ: 上の句語呂→下の句語呂を順番に再生）
+  const { goroHighlightPhase, resetGoroHighlight } = useGoroPlayback({
+    current: currentQuestion?.poem ?? null,
+    showGoro: selectedCorrect,
+    goroPlayKey,
+    selectedCorrect,
+    goroRunInProgressRef,
+    currentGoroPoemIdRef,
+    lastGoroPlayKeyRef,
+  });
+
+  // currentGoroPoemId を問題に合わせて更新
+  useEffect(() => {
+    currentGoroPoemIdRef.current = currentQuestion?.poem.id ?? null;
+  }, [currentQuestion?.poem.id]);
 
   // 問題切り替え時に上の句音声を自動再生
   useEffect(() => {
@@ -83,6 +105,7 @@ export default function JissenPlayScreen() {
     setClickedWrong([]);
     setSelectedCorrect(false);
     setIsFinished(false);
+    setGoroPlayKey(0);
     lastPlayedIndexRef.current = null;
   }, [allPoems]);
 
@@ -100,6 +123,8 @@ export default function JissenPlayScreen() {
       const isCorrect = selectedIdx === currentQuestion.correctIndex;
       if (isCorrect) {
         setSelectedCorrect(true);
+        // 正解時のみ語呂再生トリガー（問題読み上げ中でも即座に切替）
+        setGoroPlayKey((k) => k + 1);
       } else {
         setClickedWrong((prev) => [...prev, selectedIdx]);
       }
@@ -114,11 +139,14 @@ export default function JissenPlayScreen() {
     if (currentIndex >= questions.length - 1) {
       setIsFinished(true);
     } else {
+      resetGoroHighlight();
       setCurrentIndex((i) => i + 1);
       setClickedWrong([]);
       setSelectedCorrect(false);
+      // goroPlayKey は単調増加させる（学習テストと同じパターン）。
+      // 0 に戻すと lastGoroPlayKeyRef との偶然の一致で effect が早期 return してしまう。
     }
-  }, [currentIndex, questions.length, clickedWrong]);
+  }, [currentIndex, questions.length, clickedWrong, resetGoroHighlight]);
 
   if (isLoading || questions.length === 0) {
     return (
@@ -145,6 +173,7 @@ export default function JissenPlayScreen() {
             style={styles.retryButton}
             onPress={() => {
               if (!allPoems) return;
+              resetGoroHighlight();
               const shuffled = shuffle([...allPoems]);
               const items: JissenQuizItem[] = shuffled.map((poem) => {
                 const q = generateQuizQuestion(poem, allPoems);
@@ -156,6 +185,7 @@ export default function JissenPlayScreen() {
               setClickedWrong([]);
               setSelectedCorrect(false);
               setIsFinished(false);
+              setGoroPlayKey(0);
               lastPlayedIndexRef.current = null;
             }}
           >
@@ -195,23 +225,36 @@ export default function JissenPlayScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.questionLabel}>上の句の音声を聞いて下の句を答えてください</Text>
 
-        {/* 音声再生ボタン（上の句テキストは非表示） */}
-        <View style={styles.audioSection}>
-          <TouchableOpacity
-            style={[styles.audioButton, isAudioPlaying && styles.audioButtonPlaying]}
-            onPress={handleReplayAudio}
-            disabled={isAudioPlaying}
-          >
-            <Text style={styles.audioButtonText}>
-              {isAudioPlaying ? '再生中...' : '上の句を聴く'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {/* 音声再生ボタン（正解前のみ表示） */}
+        {!selectedCorrect && (
+          <View style={styles.audioSection}>
+            <TouchableOpacity
+              style={[styles.audioButton, isAudioPlaying && styles.audioButtonPlaying]}
+              onPress={handleReplayAudio}
+              disabled={isAudioPlaying}
+            >
+              <Text style={styles.audioButtonText}>
+                {isAudioPlaying ? '再生中...' : '上の句を聴く'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
-        {/* 正解後に上の句を確認 */}
+        {/* 正解後に上の句を確認（語呂ハイライト付き） */}
         {selectedCorrect && (
           <View style={styles.questionCardWrap}>
-            <PoemCard poem={currentQuestion.poem} showKamiOnly />
+            <PoemCard
+              poem={currentQuestion.poem}
+              showKamiOnly
+              kamiHighlightRange={
+                goroHighlightPhase !== 'none'
+                  ? findGoroRange(
+                      currentQuestion.poem.kami_hiragana,
+                      currentQuestion.poem.kami_goro,
+                    )
+                  : undefined
+              }
+            />
           </View>
         )}
 
@@ -225,6 +268,12 @@ export default function JissenPlayScreen() {
             else if (isWrong) result = 'wrong';
             const disabled = selectedCorrect || isWrong;
 
+            // 正解カードのみ、phase==='shimo' のとき下の句語呂部分に赤文字
+            const shimoHighlightOnCard =
+              isCorrect && goroHighlightPhase === 'shimo'
+                ? findGoroRange(poem.shimo_hiragana, poem.shimo_goro)
+                : undefined;
+
             return (
               <View key={poem.id} style={styles.choiceItem}>
                 <ChoiceCard
@@ -232,6 +281,7 @@ export default function JissenPlayScreen() {
                   onPress={() => handleAnswer(index)}
                   disabled={disabled}
                   result={result}
+                  highlightRange={shimoHighlightOnCard}
                 />
               </View>
             );

@@ -44,6 +44,10 @@ export function useGoroPlayback({
   // アンマウント後の状態更新・音声再生を防ぐフラグ
   const isMountedRef = useRef(true);
 
+  // リセット世代カウンタ: resetGoroHighlight() のたびに +1 され、
+  // 進行中の run() が古い世代なら setGoroHighlightPhase を書き戻さないようにする
+  const generationRef = useRef(0);
+
   // 画面アンマウント時に必ず音声を停止する
   useEffect(() => {
     isMountedRef.current = true;
@@ -63,6 +67,14 @@ export function useGoroPlayback({
     if (goroRunInProgressRef) goroRunInProgressRef.current = true;
 
     const poemId = current.id;
+    // この run() が開始された時点の世代を捕捉する。
+    // 以降 resetGoroHighlight() が呼ばれると generationRef.current が進むため、
+    // await 越しに phase を書き戻そうとしても isStale() で弾ける。
+    const myGeneration = generationRef.current;
+    const isStale = () =>
+      !isMountedRef.current ||
+      generationRef.current !== myGeneration ||
+      (currentGoroPoemIdRef ? currentGoroPoemIdRef.current !== poemId : false);
 
     if (!isMountedRef.current) return;
     setGoroHighlightPhase('kami');
@@ -71,8 +83,7 @@ export function useGoroPlayback({
       try {
         // 上の句音声が再生中・ロード中の場合に停止
         audioService.stopAll();
-        if (!isMountedRef.current) return;
-        if (currentGoroPoemIdRef && currentGoroPoemIdRef.current !== poemId) return;
+        if (isStale()) return;
 
         const kamiUrl = current.kami_goro_audio_url;
         const shimoUrl = current.shimo_goro_audio_url;
@@ -83,26 +94,30 @@ export function useGoroPlayback({
             audioService.preload(kamiUrl),
             audioService.preload(shimoUrl),
           ]);
-          if (!isMountedRef.current) return;
-          if (currentGoroPoemIdRef && currentGoroPoemIdRef.current !== poemId) return;
+          if (isStale()) return;
 
           // 上の句語呂を再生
           await audioService.playPreloaded(kamiUri);
-          if (!isMountedRef.current) return;
-          if (currentGoroPoemIdRef && currentGoroPoemIdRef.current !== poemId) return;
+          if (isStale()) return;
 
           // 下の句語呂を再生
           setGoroHighlightPhase('shimo');
           await audioService.playPreloaded(shimoUri);
+          if (isStale()) return;
         } else if (kamiUrl) {
           await audioService.playOnce(kamiUrl);
-          if (!isMountedRef.current) return;
+          if (isStale()) return;
           setGoroHighlightPhase('shimo');
         } else if (shimoUrl) {
+          if (isStale()) return;
           setGoroHighlightPhase('shimo');
           await audioService.playOnce(shimoUrl);
         }
       } finally {
+        // in-progress フラグは必ず降ろす。
+        // 古い世代の run() が stale で早期 return する場合でも、このフラグを残すと
+        // 次の問題で新しい run() が guard に阻まれて起動できなくなる。
+        // JS はシングルスレッドなので、この時点で新しい run() が先に起動していることはない。
         if (goroRunInProgressRef) goroRunInProgressRef.current = false;
       }
     };
@@ -136,7 +151,18 @@ export function useGoroPlayback({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [goroPlayKey, showGoro, current, selectedCorrect]);
 
-  const resetGoroHighlight = () => setGoroHighlightPhase('none');
+  const resetGoroHighlight = () => {
+    // 進行中の run() を無効化するため世代を進める
+    generationRef.current += 1;
+    // 待機中の playPreloaded を強制的に resolve させ、古い run() を早期に終わらせる
+    audioService.stopAll();
+    // in-progress フラグも即座に降ろしておく（finally を待たずに次の run() が起動できるように）
+    if (goroRunInProgressRef) goroRunInProgressRef.current = false;
+    // 重複起動防止カウンタもリセット（呼び出し側が goroPlayKey を 0 に戻す場合に備え、
+    // 古い値との偶然の一致を防ぐ）
+    if (lastGoroPlayKeyRef) lastGoroPlayKeyRef.current = 0;
+    setGoroHighlightPhase('none');
+  };
 
   return { goroHighlightPhase, resetGoroHighlight };
 }

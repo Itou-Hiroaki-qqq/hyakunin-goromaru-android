@@ -1,20 +1,13 @@
-// expo-av モック
-jest.mock('expo-av', () => ({
-  Audio: {
-    Sound: {
-      createAsync: jest.fn().mockResolvedValue({
-        sound: {
-          playAsync: jest.fn().mockResolvedValue(undefined),
-          stopAsync: jest.fn().mockResolvedValue(undefined),
-          unloadAsync: jest.fn().mockResolvedValue(undefined),
-          setOnPlaybackStatusUpdate: jest.fn(),
-        },
-        status: {},
-      }),
-    },
-    setAudioModeAsync: jest.fn().mockResolvedValue(undefined),
-    requestPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }),
-  },
+// expo-audio モック（旧 expo-av から 2026-03-17 に移行済み）
+jest.mock('expo-audio', () => ({
+  createAudioPlayer: jest.fn(() => ({
+    play: jest.fn(),
+    pause: jest.fn(),
+    replace: jest.fn(),
+    remove: jest.fn(),
+    addListener: jest.fn(() => ({ remove: jest.fn() })),
+  })),
+  setAudioModeAsync: jest.fn().mockResolvedValue(undefined),
 }));
 
 // expo-sqlite モック

@@ -55,6 +55,7 @@ export default function BattlePlayScreen() {
   const [selectedCorrect, setSelectedCorrect] = useState(false);
   const [aiTook, setAiTook] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
   const computerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastPlayedIndexRef = useRef<number | null>(null);
@@ -116,7 +117,11 @@ export default function BattlePlayScreen() {
     // 上の句音声を再生
     audioService.stopAll();
     audioStartTimeRef.current = Date.now();
-    audioService.playOnce(currentQuestion.poem.kami_audio_url).catch(() => {});
+    setIsAudioPlaying(true);
+    audioService
+      .playOnce(currentQuestion.poem.kami_audio_url)
+      .catch(() => {})
+      .finally(() => setIsAudioPlaying(false));
 
     // AIタイマーをセット（語呂終了秒数 + 難易度オフセット）
     const goroEndSec = getKamiGoroEndSec(currentQuestion.poem.id);
@@ -152,6 +157,19 @@ export default function BattlePlayScreen() {
     setIsFinished(false);
     lastPlayedIndexRef.current = null;
   }, [allPoems, difficulty, questionCount]);
+
+  /**
+   * 上の句音声を再生し直す（音が出ないときのフォールバック用）
+   * AIタイマーはリセットしない（対戦テンポを維持するため）
+   */
+  const handleReplayAudio = useCallback(() => {
+    if (!currentQuestion?.poem.kami_audio_url || isAudioPlaying) return;
+    setIsAudioPlaying(true);
+    audioService
+      .playOnce(currentQuestion.poem.kami_audio_url)
+      .catch(() => {})
+      .finally(() => setIsAudioPlaying(false));
+  }, [currentQuestion, isAudioPlaying]);
 
   const handleAnswer = useCallback(
     (selectedIdx: number) => {
@@ -265,10 +283,27 @@ export default function BattlePlayScreen() {
           </Animated.View>
         )}
 
-        {/* 上の句（問題） */}
-        <View style={styles.questionCardWrap}>
-          <PoemCard poem={currentQuestion.poem} showKamiOnly />
-        </View>
+        {/* 上の句エリア: 回答前はプレースホルダ+リプレイボタン、回答後は札を表示 */}
+        {isAnswered ? (
+          <View style={styles.questionCardWrap}>
+            <PoemCard poem={currentQuestion.poem} showKamiOnly />
+          </View>
+        ) : (
+          <View style={styles.audioPlaceholder}>
+            <Text style={styles.audioPlaceholderText}>
+              {isAudioPlaying ? '🔊 読み上げ中...' : '🔊 上の句を聞いて札を選んでください'}
+            </Text>
+            <TouchableOpacity
+              style={[styles.replayButton, isAudioPlaying && styles.replayButtonDisabled]}
+              onPress={handleReplayAudio}
+              disabled={isAudioPlaying}
+            >
+              <Text style={styles.replayButtonText}>
+                {isAudioPlaying ? '再生中...' : 'もう一度聴く'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* 4択選択肢 */}
         <View style={styles.choiceGrid}>
@@ -344,6 +379,39 @@ const styles = StyleSheet.create({
   handEmoji: { fontSize: 40 },
   aiTookText: { fontSize: 14, color: COLORS.incorrect, fontWeight: '700', marginTop: 4 },
   questionCardWrap: { alignItems: 'center' },
+  // 上の句札が非表示のときのプレースホルダ（札と同じくらいの縦スペースを確保してレイアウト揺れを防ぐ）
+  audioPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 180,
+    backgroundColor: '#fffbf0',
+    borderWidth: 2,
+    borderColor: '#f5d78e',
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    padding: 16,
+    gap: 16,
+  },
+  audioPlaceholderText: {
+    fontSize: 15,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  replayButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 24,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+  },
+  replayButtonDisabled: {
+    backgroundColor: '#9ca3af',
+  },
+  replayButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
   choiceGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

@@ -5,6 +5,7 @@
 
 # Keystore credentials (never commit)
 keystore.properties
+*.keystore
 
 # dependencies
 node_modules/

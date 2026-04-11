@@ -23,7 +23,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "jp.co.hyakunin_goromaru",
-      "versionCode": 1,
+      "versionCode": 5,
       "permissions": [
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
