@@ -60,3 +60,6 @@ settings.local.json
 
 # test coverage
 coverage/
+
+# recruit
+INTERVIEW_PREP.md
